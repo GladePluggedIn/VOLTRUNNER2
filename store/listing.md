@@ -6,7 +6,7 @@ Copy these into Play Console > Grow users > Store presence > Main store listing.
 Volt Runner: Maze Puzzle
 
 ## Short description (max 80 characters)
-Grab every power cell, beat the clock and escape 200 tricky tile mazes!
+Grab every power cell, beat the clock and escape 600 tile mazes!
 
 ## Full description (max 4000 characters)
 Help a plucky little robot power up! Volt Runner is a top-down tile puzzle game where every level is a race against the clock.
@@ -22,8 +22,17 @@ Grab every power cell to charge the socket, then dash through the exit portal be
 • Color-coded portals that warp you across the map
 • Patrolling drones that zap you on contact
 
-🗺️ 200 LEVELS, BIGGER AND HARDER
+🗺️ 600 LEVELS, BIGGER AND HARDER
 Start with short training rooms and work up to huge mazes that stretch far past your screen. Peek at the full map to plan your route, but the clock keeps ticking!
+
+📅 DAILY CHALLENGES
+A brand-new hand-checked map every day, the same for every player: small, brutal, and on a very tight clock. Clear all seven in a week to earn that week's exclusive robot skin.
+
+🎨 UNLOCKABLE SKINS
+Earn 8 robot skins by reaching level milestones, plus 12 rotating weekly skins from the daily challenges.
+
+🎵 CHILL CHIPTUNE SOUNDTRACK
+Three laid-back 8-bit tracks that change as you go deeper.
 
 🏆 RACE FOR THE FASTEST TIMES
 Your best time on every level is saved. Clear a full sector of 10 levels to post your total time to the Google Play Games leaderboards, and see how you rank against players worldwide.

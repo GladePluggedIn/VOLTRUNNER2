@@ -1,5 +1,7 @@
 # Volt Runner: getting it onto Google Play
 
+> Using GitHub? Jump to **Building on GitHub**. You can skip Steps 1, 2 and 4.
+
 This folder holds everything you need:
 
 | Folder / file | What it is |
@@ -10,6 +12,24 @@ This folder holds everything you need:
 | `assets/` | Source art for the app icon and splash screen |
 
 Package name: **`com.voltrunner.game`**. Change it now if you want something else (it can't be changed after your first upload). It appears in `capacitor.config.json`, `android/app/build.gradle` (`namespace` and `applicationId`) and the Java folder `android/app/src/main/java/com/voltrunner/game`.
+
+---
+
+## Building on GitHub (no Android Studio needed)
+Every time you push changes to GitHub, the **Build Android app** workflow builds the game on GitHub's servers.
+Open the repo's **Actions** tab, then the latest run, then **Artifacts**:
+- **volt-runner-test-apk**: unzip it and install `app-debug.apk` on your phone to play-test (allow "install unknown apps" when asked).
+- **volt-runner-play-aab**: the signed file for Google Play. It appears only after the two signing secrets below are set.
+
+**One-time signing setup**
+1. **Actions > Make upload key > Run workflow.** When it finishes, download the **upload-key** artifact and unzip it.
+2. Back up `upload-key.jks` and `password.txt` somewhere safe (like a password manager or cloud drive). If you lose them, you can't update the app without contacting Google support.
+3. **Settings > Secrets and variables > Actions > New repository secret**, twice:
+   - `KEYSTORE_BASE64` = the whole text of `upload-key-base64.txt`
+   - `KEYSTORE_PASSWORD` = the text of `password.txt`
+4. Delete the upload-key artifact from that run.
+5. **Actions > Build Android app > Run workflow** to build the signed `.aab`.
+6. For Play Games (Step 5 below), use the SHA-1 from Play Console's **App signing** page. Test leaderboards with the version installed from your Play closed test. The test APK from GitHub uses a temporary key that changes every build, so Play Games sign-in won't work in it, but everything else will.
 
 ---
 
@@ -47,15 +67,17 @@ In Play Console, open your app:
      `keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android`
 4. Copy the **Project ID** (the long number under the game name on the Configuration page) into
    `android/app/src/main/res/values/strings.xml` → replace `0000000000`.
-5. **Leaderboards > Create leaderboard**: make these 21:
+5. **Leaderboards > Create leaderboard**: make these 62:
 
    | Name | Format | Ordering |
    |---|---|---|
    | Levels cleared | Numeric | Larger is better |
+   | Daily challenge | Time | Smaller is better |
    | Sector 1 (levels 1–10) total time | Time | Smaller is better |
-   | Sector 2 (levels 11–20) total time | Time | Smaller is better |
    | … one per 10 levels … | | |
-   | Sector 20 (levels 191–200) total time | Time | Smaller is better |
+   | Sector 60 (levels 591–600) total time | Time | Smaller is better |
+
+   Google allows at most 70 leaderboards per game, so 62 fits. The Daily challenge board's "Today" view shows the current day's map.
 
 6. Copy each leaderboard's **ID** into
    `android/app/src/main/assets/public/leaderboards.js` (and the same file in `www/` if you keep editing the game).
@@ -89,4 +111,4 @@ Then bump `versionCode` and build a new `.aab`.
 - Every level's best time is saved on the phone (shown in the level menu).
 - When all 10 levels of a sector are cleared, their total best time is posted to that sector's board, and it improves as you beat your bests.
 - "Levels cleared" posts how many levels you've beaten.
-- 🏆 in the game opens the boards. Google Play allows at most 70 leaderboards per game, which is why times are grouped by sector instead of one board per level. If you add levels later, add one sector board per 10 levels.
+- 🏆 in the game opens the boards. Google Play allows at most 70 leaderboards per game, which is why times are grouped by sector instead of one board per level. If you add levels later, add one sector board per 10 levels (70 max in total).

@@ -32,8 +32,27 @@
   .pad button { background:var(--panel); border:1px solid var(--line); border-radius:14px; color:var(--ink); font-size:22px; touch-action:none; cursor:pointer; }
   .pad button.on { background:#24305a; border-color:var(--accent); }
   .pad .u { grid-column:2; grid-row:1; } .pad .l { grid-column:1; grid-row:2; } .pad .d { grid-column:2; grid-row:2; } .pad .r { grid-column:3; grid-row:2; }
-  .pad .m { grid-column:3; grid-row:1; font:700 12px Inter; color:var(--accent); }
-  .pad .lb { grid-column:1; grid-row:1; font-size:18px; }
+  .btn.icon { width:38px; padding:7px 0; text-align:center; font-size:16px; line-height:1.2; flex:none; }
+  .btn.on { border-color:var(--volt); color:var(--volt); }
+  .tester-row { display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; }
+  input.lvlIn { background:var(--panel); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:9px 10px; font:700 15px Inter; width:90px; text-align:center; user-select:text; -webkit-user-select:text; }
+  .skins { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; }
+  .skin { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:6px 4px 8px; color:var(--ink); display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; min-width:0; }
+  .skin canvas { width:100%; max-width:84px; aspect-ratio:1; border-radius:8px; }
+  .skin b { font:700 11px Inter; line-height:1.2; }
+  .skin small { font:500 10px Inter; color:var(--dim); }
+  .skin.on { border-color:var(--volt); } .skin.on small { color:var(--volt); }
+  .skin:disabled { cursor:default; opacity:.75; }
+  .tester-skin { width:100%; border-top:1px solid var(--line); padding-top:10px; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .dstrip { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; width:100%; }
+  .dday { background:var(--panel); border:1px solid var(--line); border-radius:9px; color:var(--ink); font:700 11px Inter; padding:6px 2px; display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; min-width:0; }
+  .dday small { font:500 9px Inter; color:var(--dim); white-space:nowrap; }
+  .dday.done { border-color:var(--good); } .dday.done small { color:var(--good); }
+  .dday.today { border-color:var(--volt); }
+  .dday:disabled { opacity:.35; cursor:default; }
+  .wkcard { display:flex; gap:12px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 12px; }
+  #mDaily { border-color:var(--volt); }
+  .badge { font:700 10px Inter; color:#1a1400; background:var(--volt); border-radius:6px; padding:2px 6px; letter-spacing:.06em; }
   .overlay { position:absolute; inset:0; display:none; place-items:center; background:rgba(8,11,20,.94); border-radius:12px; z-index:5; padding:14px; }
   .overlay.show { display:grid; }
   .card { text-align:center; width:100%; max-width:400px; max-height:100%; overflow-y:auto; display:flex; flex-direction:column; gap:12px; align-items:center; padding:4px; overscroll-behavior:contain; touch-action:pan-y; }
@@ -62,16 +81,18 @@
   .lvlnav b { font-family:"Press Start 2P",monospace; font-size:11px; min-width:130px; }
   input.nick { background:var(--panel); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:9px 10px; font:500 14px Inter; width:170px; user-select:text; -webkit-user-select:text; }
   #mapCv { image-rendering:pixelated; border-radius:8px; max-width:100%; }
-  @media (min-width:700px) and (hover:hover) { .pad .u, .pad .d, .pad .l, .pad .r { display:none; } .pad { grid-template-rows:52px; } }
+  @media (min-width:700px) and (hover:hover) { .pad { display:none; } }
 </style>
 </head>
 <body>
 <div id="app">
   <div class="hud">
     <div class="title" id="lvlName">VOLT RUNNER</div>
-    <button class="btn" id="soundBtn" aria-label="Toggle sound">🔊</button>
-    <button class="btn" id="restartBtn">↻</button>
-    <button class="btn" id="menuBtn">Levels</button>
+    <button class="btn icon" id="testBtn" aria-label="Tester tools" hidden>🧪</button>
+    <button class="btn icon" id="mapBtn" aria-label="Map">🗺️</button>
+    <button class="btn icon" id="lbBtn" aria-label="Leaderboard">🏆</button>
+    <button class="btn icon" id="restartBtn" aria-label="Retry">↻</button>
+    <button class="btn icon" id="menuBtn" aria-label="Levels">☰</button>
   </div>
   <div class="stats">
     <div class="stat"><small>Cells left</small><b id="cellsOut">0</b></div>
@@ -84,9 +105,7 @@
     <div class="overlay" id="ov"><div class="card" id="ovCard"></div></div>
   </div>
   <div class="pad" id="pad">
-    <button class="lb" id="lbBtn" aria-label="Leaderboard">🏆</button>
     <button class="u" data-d="0,-1" aria-label="Up">▲</button>
-    <button class="m" id="mapBtn">MAP</button>
     <button class="l" data-d="-1,0" aria-label="Left">◀</button>
     <button class="d" data-d="0,1" aria-label="Down">▼</button>
     <button class="r" data-d="1,0" aria-label="Right">▶</button>
@@ -199,7 +218,7 @@ const LEVELS = [
 ];
 
 const KEYS = { r: "R", b: "B", y: "Y" };
-const PORTAL_CH = "1234";
+const PORTAL_CH = "123456";
 const isHazard = t => t === "w" || t === "l";
 // Bumpers deflect a slide 90 degrees: "/" and "\"
 function deflect(t, dx, dy) { return t === "/" ? [-dy, -dx] : [dy, dx]; }
@@ -336,12 +355,18 @@ const GEN_INTRO = {
   30: "Rooms now have pillars. Watch for twisty routes.",
   50: "Halfway! Bigger maps, longer key chains, tighter clocks.",
   75: "The deep grid. Plan your route before you run.",
-  100: "Level 100. Survive this and the Deep Grid awaits.",
-  101: "Bumpers! The angled blocks on ice bounce you sideways mid-slide.",
+  100: "Ice rooms are now solid ice with no walkway. Steer with the bumpers, pillars and walls.",
+  101: "Bumpers turn you 90°. Plan every slide from where you'll come to a stop.",
   125: "Every crossing costs a power-up. Don't waste them on detours.",
   150: "Portals! Step on a colored portal to warp to its twin. Some rooms can only be reached this way.",
   175: "Portal mazes. Map out where each pair leads before you commit.",
-  200: "Level 200, the final overload. Good luck, runner.",
+  200: "Level 200. You've beaten the Portal Zone. Welcome to the Hyper Grid.",
+  201: "Hyper Grid: the largest maps yet, packed with drones.",
+  250: "More portals per level from here. Track every pair on the MAP.",
+  300: "Void Circuit: denser bumpers and longer key chains.",
+  400: "Singularity: the clock barely forgives a wrong turn.",
+  500: "Overvolt: the last hundred. Every crossing counts.",
+  600: "Level 600, the final circuit. Legendary runners only.",
 };
 const GEN_TIPS = [
   "Keys are often hidden deep in dead ends. Explore before you commit.",
@@ -351,7 +376,12 @@ const GEN_TIPS = [
   "Power-ups are one crossing each. Spares wait for you on the other side.",
   "You can only carry one pair of fins and one pair of boots at a time.",
   "Bumpers on ice redirect you. Think two bounces ahead.",
+  "Portals can lead to dead ends. Check the MAP before jumping in.",
+  "Drones guard the halls in packs now. Watch their rhythm first.",
+  "Grab spare power-ups you pass. You'll need them on the way back.",
 ];
+function genName(L) { return ADJ[L % 25] + " " + NOUN[(L * 3 + Math.floor(L / 25)) % 25]; }
+function genHint(L) { return GEN_INTRO[L] || GEN_TIPS[L % GEN_TIPS.length]; }
 const ADJ = ["Copper","Neon","Static","Rusty","Humming","Silent","Flux","Ion","Quartz","Cobalt","Magnetic","Phantom","Overclocked","Shorted","Molten","Frozen","Echo","Pulse","Hollow","Tangled","Grounded","Live","High-Voltage","Signal","Binary"];
 const NOUN = ["Grid","Relay","Conduit","Vault","Junction","Circuit","Labyrinth","Reactor","Core","Array","Switchyard","Coil","Bus","Matrix","Furnace","Cistern","Foundry","Annex","Spire","Substation","Catacomb","Breaker","Capacitor","Network","Spiral"];
 
@@ -362,6 +392,11 @@ function genParams(L) {
     P = { t, rooms: Math.round(5 + t * 20), n: t < 0.3 ? 5 : t < 0.65 ? 6 : 7, gateP: 0.35 + 0.5 * t,
       cells: 4 + Math.round(t * 18), drones: L >= 14 ? 1 + Math.floor(t * 10) : 0,
       special: Math.min(0.75, 0.25 + t * 0.6), timeF: 1.1 - 0.55 * t };
+  } else if (L > 200) {
+    const u = (L - 200) / 400;
+    P = { t: 2 + u, rooms: Math.round(36 + u * 13), n: 7, gateP: 0.95,
+      cells: 34 + Math.round(u * 16), drones: 19 + Math.floor(u * 16),
+      special: 0.85, timeF: 0.43 - 0.07 * u };
   } else {
     const u = (L - 100) / 100;
     P = { t: 1 + u, rooms: Math.round(25 + u * 11), n: 7, gateP: 0.85 + 0.1 * u,
@@ -371,16 +406,24 @@ function genParams(L) {
   P.Rc = Math.ceil(Math.sqrt(P.rooms)); P.Rr = Math.ceil(P.rooms / P.Rc);
   P.water = L >= 12; P.lava = L >= 15; P.crate = L >= 18; P.ice = L >= 22; P.hazard = L >= 26; P.maze = L >= 30;
   P.bumpers = L >= 101;
+  P.fullIce = L >= 100;
   P.portalEdgeP = L >= 150 ? 0.12 + 0.13 * (L - 150) / 50 : 0;
   P.shortcuts = L >= 150 ? 1 + Math.floor((L - 150) / 25) : 0;
+  P.maxEdgePortals = 3; P.maxPairs = 4; P.extraBumpers = 0;
+  if (L > 200) {
+    const u = (L - 200) / 400;
+    P.portalEdgeP = 0.25 + 0.1 * u; P.shortcuts = 2 + Math.floor(u * 2);
+    P.maxEdgePortals = L >= 250 ? 4 : 3; P.maxPairs = L >= 250 ? 6 : 5;
+    P.extraBumpers = L >= 300 ? (L >= 450 ? 2 : 1) : 0;
+  }
   return P;
 }
 
-function generateLevel(L, seed) {
+function generateLevel(L, seed, Pover) {
   const rng = mulberry32(seed * 7919 + L);
   const ri = n => Math.floor(rng() * n);
   const pick = a => a[ri(a.length)];
-  const P = genParams(L);
+  const P = Pover || genParams(L);
   const { Rr, Rc, n } = P, st = n + 3;
   const W = Rc * st - 1, H = Rr * st - 1;
   const g = Array.from({ length: H }, () => Array(W).fill("#"));
@@ -425,9 +468,15 @@ function generateLevel(L, seed) {
     }
   }
 
+  if (P.forceIce && !type.includes("ice")) {
+    const opts = []; for (let r = 0; r < N; r++) if (r !== start && r !== exit) opts.push(r);
+    if (opts.length) type[pick(opts)] = "ice";
+  }
+
   // ---- connections: corridors or portal links ----
   const reserved = Array.from({ length: N }, () => []);
   const corr = {}, portalEdge = {};
+  const exits = Array.from({ length: N }, () => []);   // [outsideTile, entryTile]
   let nextPortal = 0;
   const randomSpot = r => {
     const X = rX(r), Y = rY(r);
@@ -439,10 +488,10 @@ function generateLevel(L, seed) {
   };
   const isRes = (r, x, y) => reserved[r].some(([a, b]) => a === x && b === y);
   for (const [u, v] of edges) {
-    if (v !== exit && P.portalEdgeP && nextPortal < 3 && rng() < P.portalEdgeP) {
+    if (v !== exit && P.portalEdgeP && nextPortal < P.maxEdgePortals && rng() < P.portalEdgeP) {
       const pu = randomSpot(u), pv = randomSpot(v);
       if (isRes(u, ...pu) || isRes(v, ...pv)) { /* fall through to a corridor */ }
-      else { reserved[u].push(pu); reserved[v].push(pv); portalEdge[v] = { ch: "1234"[nextPortal++], pu, pv }; continue; }
+      else { reserved[u].push(pu); reserved[v].push(pv); portalEdge[v] = { ch: PORTAL_CH[nextPortal++], pu, pv }; continue; }
     }
     const ui = Math.floor(u / Rc), uj = u % Rc, vi = Math.floor(v / Rc), vj = v % Rc;
     const k = ri(n);
@@ -461,7 +510,24 @@ function generateLevel(L, seed) {
       reserved[v].push(ui < vi ? [x, y0 + 3] : [x, y0 - 1]);
     }
     corr[v] = tiles;
+    exits[u].push([tiles[0], reserved[u][reserved[u].length - 1], v]);
+    exits[v].push([tiles[2], reserved[v][reserved[v].length - 1], v]);
   }
+
+  // Solid-ice levels decide every gate up front, so ice rooms know which doorways open onto water or lava.
+  const pre = {};
+  if (P.fullIce) {
+    for (const v of bfs) {
+      if (v === start || v === exit || portalEdge[v] || rng() >= P.gateP) continue;
+      const u = parentOf[v];
+      const opts = ["door", "door", "door"];
+      if (P.water) opts.push("water");
+      if (P.lava) opts.push("lava");
+      if (P.crate && type[u] !== "ice") opts.push("crate", "crate");
+      pre[v] = pick(opts);
+    }
+  }
+  const hazardEdge = v => pre[v] === "water" || pre[v] === "lava";
 
   // ---- carve rooms ----
   const cand = Array.from({ length: N }, () => []);   // floor tiles for items
@@ -502,10 +568,78 @@ function generateLevel(L, seed) {
     return [...trav].map(k => [k % W, Math.floor(k / W)]);
   }
 
+  // Solid-ice room: you can only stop at walls, pillars, bumper dead-ends, pads, or by sliding out a doorway.
+  // Every doorway, pad and portal must reach every other one, no stop may be a trap, no endless bounce loops.
+  function iceFullAnalysis(X, Y, r) {
+    const inR = (x, y) => x >= X && y >= Y && x < X + n && y < Y + n;
+    const key = (x, y) => y * W + x;
+    const exitKey = new Set(exits[r].map(([o]) => key(o[0], o[1])));
+    const sink = new Set(exits[r].filter(([, , v]) => hazardEdge(v)).map(([o]) => key(o[0], o[1])));
+    const trav = new Set(), edges = new Map();
+    const slide = (x, y, dx, dy) => {
+      let moved = false, steps = 0;
+      for (;;) {
+        const nx = x + dx, ny = y + dy, k = key(nx, ny);
+        if (exitKey.has(k)) return k;
+        if (!inR(nx, ny) || g[ny][nx] === "#") return moved ? key(x, y) : null;
+        x = nx; y = ny; moved = true;
+        const t = g[y][x];
+        if (t === ".") return key(x, y);
+        if (t === "i") trav.add(key(x, y));
+        else if (t === "/" || t === "\\") [dx, dy] = deflect(t, dx, dy);
+        if (++steps > 8 * n * n) return -1;
+      }
+    };
+    const keyNodes = exits[r].map(([o]) => key(o[0], o[1]));
+    for (let y = Y; y < Y + n; y++) for (let x = X; x < X + n; x++) if (g[y][x] === ".") keyNodes.push(key(x, y));
+    const entryDir = new Map(exits[r].map(([o, e]) => [key(o[0], o[1]), [e[0] - o[0], e[1] - o[1]]]));
+    const q = [...keyNodes];
+    for (const k of q) edges.set(k, []);
+    for (let i = 0; i < q.length; i++) {
+      const k = q[i], x = k % W, y = Math.floor(k / W);
+      const dirs = entryDir.has(k) ? [entryDir.get(k)] : [[0, -1], [0, 1], [-1, 0], [1, 0]];
+      // (a hazard doorway is only an entry point: nothing routes back through it)
+      for (const [dx, dy] of dirs) {
+        const s = slide(x, y, dx, dy);
+        if (s === -1) return null;
+        if (s === null || s === k) continue;
+        edges.get(k).push(s);
+        if (!edges.has(s)) { edges.set(s, []); q.push(s); }
+      }
+    }
+    const reach = from => { const seen = new Set([from]), st = [from]; while (st.length) { const c = st.pop(); if (c !== from && sink.has(c)) continue; for (const o of edges.get(c) || []) if (!seen.has(o)) { seen.add(o); st.push(o); } } return seen; };
+    for (const a of keyNodes) { const s = reach(a); for (const b of keyNodes) if (!s.has(b)) return null; }
+    const safe = new Set(keyNodes.filter(k => !sink.has(k)));
+    let grew = true;
+    while (grew) { grew = false; for (const [k, outs] of edges) if (!safe.has(k) && outs.some(o => safe.has(o))) { safe.add(k); grew = true; } }
+    for (const k of edges.keys()) if (!safe.has(k) && !sink.has(k)) return null;
+    return [...trav].map(k => [k % W, Math.floor(k / W)]);
+  }
+
   function carveRoom(r) {
     const X = rX(r), Y = rY(r), T = type[r];
     const fill = c => { for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) g[Y + y][X + x] = c; };
     fill(".");
+    if (T === "ice" && P.fullIce) {
+      let trav = null;
+      const free = () => { for (let k = 0; k < 50; k++) { const x = X + ri(n), y = Y + ri(n); if (g[y][x] === "i" && !isRes(r, x, y)) return [x, y]; } return null; };
+      for (let attempt = 0; attempt < 160 && !trav; attempt++) {
+        fill("i");
+        for (const [x, y] of reserved[r]) if (!exits[r].some(([, e]) => e[0] === x && e[1] === y)) g[y][x] = "."; // portal spots
+        const pads = 1 + ri(2);
+        for (let p = 0; p < pads; p++) { const c = free(); if (c) g[c[1]][c[0]] = "."; }
+        const pil = ri(3);
+        for (let p = 0; p < pil; p++) { const c = free(); if (c) g[c[1]][c[0]] = "#"; }
+        const nb = 4 + ri(4) + P.extraBumpers;
+        for (let b = 0; b < nb; b++) { const c = free(); if (c) g[c[1]][c[0]] = rng() < 0.5 ? "/" : "\\"; }
+        trav = iceFullAnalysis(X, Y, r);
+      }
+      if (!trav) return false;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++)
+        if (g[Y + y][X + x] === "." && !isRes(r, X + x, Y + y)) cand[r].push([X + x, Y + y]);
+      iceCand[r] = trav;
+      return true;
+    }
     if (T === "ice") {
       let trav = null;
       for (let attempt = 0; attempt < 14 && !trav; attempt++) {
@@ -514,7 +648,7 @@ function generateLevel(L, seed) {
         const pil = n >= 6 ? 1 + ri(2) : ri(2);
         for (let p = 0; p < pil; p++) g[Y + 1 + ri(n - 2)][X + 1 + ri(n - 2)] = "#";
         if (P.bumpers && attempt < 12) {
-          const nb = n >= 7 ? 2 + ri(3) : 1 + ri(2);
+          const nb = (n >= 7 ? 2 + ri(3) : 1 + ri(2)) + P.extraBumpers;
           for (let b = 0; b < nb; b++) { const x = X + 1 + ri(n - 2), y = Y + 1 + ri(n - 2); if (g[y][x] === "i") g[y][x] = rng() < 0.5 ? "/" : "\\"; }
         }
         trav = iceAnalysis(X, Y);
@@ -611,12 +745,22 @@ function generateLevel(L, seed) {
         const tiles = corr[v];
         for (const [x, y] of tiles) g[y][x] = ".";
         if (v === exit) { g[tiles[1][1]][tiles[1][0]] = "S"; }
-        else if (rng() < P.gateP) {
-          const opts = ["door", "door", "door"];
-          if (P.water) opts.push("water");
-          if (P.lava) opts.push("lava");
-          if (P.crate) opts.push("crate", "crate");
-          const k = pick(opts);
+        else if (P.fullIce ? pre[v] : rng() < P.gateP) {
+          let k;
+          if (P.fullIce) k = pre[v];
+          else {
+            const opts = ["door", "door", "door"];
+            if (P.water) opts.push("water");
+            if (P.lava) opts.push("lava");
+            if (P.crate) opts.push("crate", "crate");
+            k = pick(opts);
+          }
+          if ((k === "water" || k === "lava") && P.fullIce) {
+            // power-ups need floor: solid-ice rooms only have a pad or two
+            const item = k === "water" ? "h" : "f";
+            if (!putIn(u, item) || !putIn(v, item)) k = "door";
+            else { for (const [x, y] of tiles) g[y][x] = k === "water" ? "w" : "l"; k = "placed"; }
+          }
           if (k === "door") {
             const c = pick(["r", "b", "y"]);
             if (!place(reach, c)) return null;
@@ -626,7 +770,7 @@ function generateLevel(L, seed) {
             // one pair to get across, one waiting on the far side for the trip back
             if (!putIn(u, item) || !putIn(v, item)) return null;
             for (const [x, y] of tiles) g[y][x] = k === "water" ? "w" : "l";
-          } else {
+          } else if (k === "crate") {
             g[tiles[0][1]][tiles[0][0]] = "x";
             g[tiles[1][1]][tiles[1][0]] = "w";
           }
@@ -637,12 +781,12 @@ function generateLevel(L, seed) {
     if (v !== exit) reach.push(v);
   }
   // shortcut portals between far-apart rooms
-  for (let s = 0; s < P.shortcuts && nextPortal < 4; s++) {
+  for (let s = 0; s < P.shortcuts && nextPortal < P.maxPairs; s++) {
     const a = pick(reach), b = pick(reach);
     if (a === b) continue;
     const pa = takeTile(a, false), pb = takeTile(b, false);
     if (!pa || !pb) continue;
-    const ch = "1234"[nextPortal++];
+    const ch = PORTAL_CH[nextPortal++];
     g[pa[1]][pa[0]] = ch; g[pb[1]][pb[0]] = ch;
   }
   for (let c = 0; c < P.cells; c++) if (!place(reach, "c")) return null;
@@ -651,8 +795,8 @@ function generateLevel(L, seed) {
     const r = pick(droneRooms), p = takeTile(r, false);
     if (p) g[p[1]][p[0]] = rng() < 0.5 ? "e" : "v";
   }
-  const name = ADJ[L % 25] + " " + NOUN[(L * 3 + Math.floor(L / 25)) % 25];
-  const hint = GEN_INTRO[L] || GEN_TIPS[L % GEN_TIPS.length];
+  const name = genName(L);
+  const hint = genHint(L);
   return { name, hint, map: g.map(r => r.join("")), gates };
 }
 
@@ -682,6 +826,22 @@ function verifyLevel(lv) {
     }
   }
   const everSeen = new Set();
+  // Is there anything left to do on the far side of a crossing? (unseen ground, a pickup, or a gate we can open)
+  function worthIt(x0, y0) {
+    const seen = new Set([y0 * s.w + x0]), q = [[x0, y0]];
+    for (let i = 0; i < q.length && i < 4000; i++) {
+      const [x, y] = q[i];
+      if (!everSeen.has(y * s.w + x)) return true;
+      for (const [dx, dy] of DIRS) {
+        const r = sim(x, y, false, false, dx, dy, true);
+        if (!r || r.wh || r.wf) continue;
+        if (r.ev === 1 || r.ev === 2) return true;
+        const k = r.y * s.w + r.x;
+        if (!seen.has(k)) { seen.add(k); q.push([r.x, r.y]); }
+      }
+    }
+    return false;
+  }
   function search(allow, reach1, mode) {
     const key = (x, y, wh, wf) => ((y * s.w + x) << 2) | (wh ? 2 : 0) | (wf ? 1 : 0);
     const k0 = key(s.px, s.py, s.wet.h, s.wet.f);
@@ -698,6 +858,7 @@ function verifyLevel(lv) {
           const at = r.y * s.w + r.x;
           if (reach1 && reach1.has(at)) continue;                 // pointless dip
           if (mode === 2 && everSeen.has(at)) continue;           // save crossings for new ground first
+          if (mode === 3 && !worthIt(r.x, r.y)) continue;         // only cross back if there's work there
         }
         if (r.ev) {
           const path = [d]; let c = kk;
@@ -716,7 +877,7 @@ function verifyLevel(lv) {
     if (s.won) return steps;
     const a = search(false, null, 1);
     for (const v of a.visited || []) everSeen.add(v);
-    const path = a.path || search(true, a.visited, 2).path || search(true, a.visited, 3).path;
+    const path = a.path || search(true, a.visited, 2).path || search(true, a.visited, 3).path || search(true, a.visited, 4).path;
     if (!path) return -1;
     for (const d of path) {
       if (!tryMove(s, DIRS[d][0], DIRS[d][1])) return -1;
@@ -730,14 +891,51 @@ function verifyLevel(lv) {
   return -1;
 }
 
-if (typeof module !== "undefined") module.exports = { generateLevel, verifyLevel, genParams };
+// ===== Daily challenge: one small, brutal map per UTC day, identical for everyone =====
+function dayHash(str) { let h = 2166136261; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function dailyParams(dateStr) {
+  const r = mulberry32(dayHash(dateStr));
+  const rooms = r() < 0.5 ? 4 : 6;
+  const P = { t: 3, rooms, n: 7, gateP: 0.95, cells: 10 + Math.floor(r() * 5), drones: 4 + Math.floor(r() * 4),
+    special: 0.95, timeF: 0.36 };
+  P.Rc = rooms === 4 ? 2 : 3; P.Rr = 2;
+  P.water = P.lava = P.crate = P.ice = P.hazard = P.maze = true;
+  P.bumpers = true; P.fullIce = true;
+  P.portalEdgeP = 0.35; P.shortcuts = 1; P.maxEdgePortals = 2; P.maxPairs = 3; P.extraBumpers = 1;
+  return P;
+}
+const DAILY_ADJ = ["Crimson","Midnight","Electric","Shattered","Hollow","Blazing","Frozen","Twisted","Silent","Radiant","Phantom","Static"];
+const DAILY_NOUN = ["Gauntlet","Trial","Vault","Crucible","Maze","Rift","Circuit","Labyrinth","Gate","Chamber","Knot","Spiral"];
+function generateDaily(dateStr) {
+  const P = dailyParams(dateStr), base = dayHash(dateStr) % 100000;
+  const cands = [], backup = [];
+  for (let k = 1; k <= 800 && cands.length < 3; k++) {
+    const lv = generateLevel(1000, base + k, P);
+    if (!lv) continue;
+    const steps = verifyLevel(lv);
+    if (steps < 0) continue;
+    const m = lv.map.join(""), bumps = (m.match(/[\/\\]/g) || []).length;
+    const c = { lv, steps, score: lv.gates * 25 + steps + bumps * 10 };
+    if (lv.gates >= 3) cands.push(c); // real gates every day; ice only some days
+    else if (backup.length < 3) backup.push(c);
+  }
+  if (!cands.length) cands.push(...backup);
+  if (!cands.length) return null;
+  cands.sort((a, b) => b.score - a.score);
+  const c = cands[0], h = dayHash(dateStr);
+  return { name: DAILY_ADJ[h % 12] + " " + DAILY_NOUN[(h >>> 4) % 12], hint: "Daily challenge: small map, mixed mechanics, very tight clock.",
+    time: Math.ceil((c.steps * 0.4 + 10) / 5) * 5, map: c.lv.map };
+}
 
-const GEN_LEVELS = [[4,90],[3,125],[1,105],[1,85],[6,110],[2,110],[6,100],[1,160],[4,175],[1,155],[6,110],[6,140],[2,120],[5,170],[4,120],[3,145],[1,180],[5,130],[1,140],[2,160],[1,140],[2,185],[1,235],[1,170],[1,225],[2,270],[7,200],[7,235],[7,200],[7,160],[2,195],[5,180],[4,195],[2,210],[9,260],[5,320],[9,230],[5,185],[2,215],[9,245],[1,230],[8,325],[8,285],[7,215],[2,220],[3,340],[7,320],[2,245],[3,365],[10,240],[3,325],[2,240],[2,270],[4,245],[16,335],[10,225],[2,260],[2,435],[1,400],[6,365],[5,300],[20,375],[9,325],[11,300],[13,350],[4,320],[5,290],[2,220],[13,245],[5,305],[10,365],[21,325],[12,410],[19,400],[2,360],[21,350],[34,415],[1,335],[16,345],[17,390],[18,330],[20,355],[26,325],[11,310],[7,310],[2,330],[22,345],[9,320],[30,385],[23,375],[25,260],[9,285],[17,340],[7,340],[11,330],[25,325],[12,295],[34,355],[19,320],[10,395],[27,340],[15,280],[15,380],[6,350],[22,265],[13,365],[13,340],[22,340],[35,435],[10,350],[23,390],[12,270],[38,320],[28,305],[25,320],[16,380],[24,360],[36,380],[12,340],[12,410],[37,290],[61,330],[27,395],[28,420],[7,320],[30,455],[27,325],[20,395],[29,335],[23,340],[2,355],[35,390],[23,320],[19,340],[55,325],[11,290],[36,380],[21,465],[4,365],[40,350],[42,510],[19,450],[10,340],[21,410],[8,420],[39,445],[43,400],[50,400],[31,330],[23,475],[3,430],[74,410],[56,330],[61,460],[24,360],[6,445],[32,385],[1,355],[107,330],[56,325],[105,355],[54,460],[30,425],[74,290],[28,540],[14,355],[44,425],[30,425],[6,360],[100,385],[2,400],[56,330],[75,385],[44,370],[57,410],[29,385],[16,395],[11,500],[194,345],[5,390],[30,380],[12,360],[124,305],[6,380],[62,375],[72,480],[75,335],[80,335],[34,410],[20,325],[30,315]];
+if (typeof module !== "undefined") module.exports = { generateLevel, verifyLevel, genParams, genName, genHint, generateDaily, dayHash };
+
+const GEN_LEVELS = [[4,90],[3,125],[1,105],[1,85],[6,110],[2,110],[6,100],[1,160],[4,175],[1,155],[6,110],[6,140],[2,120],[5,170],[4,120],[3,145],[1,180],[5,130],[1,140],[2,160],[1,140],[2,185],[1,235],[1,170],[1,225],[2,270],[7,200],[7,235],[7,200],[7,160],[2,195],[5,180],[4,195],[2,210],[9,260],[5,320],[9,230],[5,185],[2,215],[9,245],[1,230],[8,325],[8,285],[7,215],[2,220],[3,340],[7,320],[2,245],[3,365],[10,240],[3,325],[2,240],[2,270],[4,245],[16,335],[10,225],[2,260],[2,435],[1,400],[6,365],[5,300],[20,375],[9,325],[11,300],[13,350],[4,320],[5,290],[2,220],[13,245],[5,305],[10,365],[21,325],[12,410],[19,400],[2,360],[21,350],[34,415],[1,335],[16,345],[17,390],[18,330],[20,355],[26,325],[11,310],[7,310],[2,330],[22,345],[9,320],[30,385],[23,375],[7,300],[9,320],[13,275],[3,310],[16,345],[38,345],[23,440],[2,370],[43,320],[11,340],[4,435],[31,345],[1,355],[3,310],[29,305],[44,295],[8,570],[1,315],[63,355],[51,360],[26,335],[47,365],[3,305],[9,345],[28,305],[2,455],[15,375],[18,380],[9,425],[23,440],[3,395],[21,340],[33,360],[3,375],[8,360],[50,340],[17,415],[20,460],[15,375],[64,345],[30,395],[13,290],[39,355],[13,305],[4,360],[47,280],[11,420],[12,460],[13,350],[2,325],[51,435],[31,415],[43,475],[3,350],[26,380],[56,505],[14,480],[35,425],[4,365],[105,375],[44,360],[4,355],[6,390],[17,515],[59,385],[10,405],[18,370],[15,365],[14,325],[54,355],[16,330],[23,415],[22,410],[51,395],[10,385],[26,350],[1,320],[10,465],[44,440],[26,510],[15,350],[29,400],[5,400],[51,480],[28,390],[14,340],[24,315],[16,345],[24,425],[20,575],[29,335],[20,365],[37,370],[23,390],[61,365],[14,470],[40,340],[71,475],[22,355],[5,290],[21,355],[12,345],[40,315],[33,405],[2,410],[1,310],[63,310],[25,370],[50,325],[24,385],[40,435],[29,335],[5,385],[10,335],[6,425],[38,370],[36,365],[71,385],[66,555],[89,490],[125,470],[119,405],[66,365],[7,385],[20,420],[90,385],[117,535],[209,440],[26,425],[56,385],[64,490],[30,460],[123,375],[55,435],[3,355],[28,390],[51,385],[56,465],[27,515],[31,395],[87,450],[48,380],[22,405],[6,400],[185,500],[151,495],[544,535],[97,395],[42,375],[16,445],[33,410],[134,405],[89,365],[7,445],[59,470],[220,415],[36,390],[9,425],[214,405],[57,415],[34,460],[89,430],[7,500],[63,480],[34,380],[135,470],[13,380],[121,445],[90,370],[34,400],[13,335],[163,415],[87,370],[136,405],[67,355],[10,420],[130,390],[119,440],[28,465],[33,545],[139,490],[4,435],[29,445],[75,545],[21,380],[44,530],[82,410],[91,395],[89,420],[31,490],[87,480],[59,360],[127,485],[68,380],[4,450],[56,390],[54,415],[195,390],[30,450],[76,500],[39,525],[31,435],[20,595],[12,410],[104,440],[88,335],[45,405],[18,455],[3,420],[52,460],[77,405],[81,450],[20,405],[66,365],[19,340],[8,470],[39,390],[91,405],[238,405],[17,385],[40,385],[128,495],[108,395],[36,415],[56,380],[133,405],[44,410],[118,480],[93,530],[94,480],[45,400],[20,395],[99,400],[81,430],[79,420],[27,395],[39,475],[15,425],[98,490],[106,425],[66,360],[11,410],[69,340],[50,315],[25,505],[53,360],[86,445],[92,435],[99,365],[86,350],[6,360],[129,470],[39,435],[87,290],[88,315],[132,430],[4,480],[45,420],[30,425],[224,400],[46,360],[41,380],[1,535],[9,405],[19,405],[18,425],[20,400],[86,400],[41,355],[32,440],[89,350],[56,385],[34,430],[72,425],[125,360],[33,435],[49,400],[15,380],[231,445],[24,485],[156,490],[52,445],[74,425],[119,470],[52,400],[18,570],[32,475],[150,560],[10,430],[121,435],[58,540],[70,440],[105,405],[31,380],[219,355],[47,495],[147,355],[19,435],[196,420],[26,390],[226,470],[24,480],[107,525],[18,510],[57,435],[266,610],[41,435],[100,485],[311,435],[352,525],[72,445],[18,325],[183,500],[26,545],[30,590],[191,415],[149,500],[17,570],[38,490],[358,580],[196,515],[151,425],[318,555],[46,660],[63,440],[355,430],[164,400],[58,475],[1,565],[131,550],[253,480],[61,435],[69,440],[131,450],[130,450],[51,440],[180,520],[97,600],[223,450],[44,520],[51,470],[1,550],[79,475],[61,445],[138,505],[154,390],[134,510],[64,550],[67,540],[107,475],[227,485],[107,500],[43,370],[349,470],[161,380],[149,600],[114,450],[27,525],[145,395],[498,450],[63,655],[192,510],[34,495],[165,385],[200,415],[24,400],[501,475],[64,440],[62,475],[160,420],[115,470],[69,425],[160,445],[108,410],[65,485],[141,450],[164,545],[91,370],[38,470],[52,520],[168,480],[49,525],[211,430],[48,455],[33,465],[216,475],[103,335],[232,480],[145,555],[150,420],[161,485],[62,485],[172,465],[273,535],[453,470],[194,450],[383,455],[81,555],[321,345],[52,405],[116,630],[14,455],[73,475],[243,545],[194,605],[239,435],[147,495],[67,385],[117,550],[16,420],[73,465],[257,490],[62,400],[314,490],[100,565],[43,375],[62,555],[203,380],[66,425],[230,505],[497,385],[45,420],[149,485],[42,430],[51,470],[34,435],[41,345],[500,570],[318,375],[82,495],[189,470],[74,395],[25,630],[40,380],[70,520],[171,570],[85,410],[231,510],[96,440],[56,425],[113,460],[557,440],[355,450],[16,445],[122,385],[114,455],[218,385],[233,405],[113,450],[49,405],[244,430],[97,450],[253,365],[97,400],[210,475],[91,560],[228,455],[29,450],[46,450],[11,480],[210,470],[173,395],[102,510],[17,515],[317,480],[11,470],[176,470],[146,440],[117,475],[99,515],[208,535],[195,515],[320,490],[162,435],[33,495],[173,445],[334,420],[151,495],[78,570],[320,620],[120,560],[36,420],[18,355],[130,390],[174,485],[162,485],[41,420],[106,475],[14,500],[12,550],[87,495],[198,445],[13,505],[312,380],[384,495],[108,370],[214,445],[5,430],[175,605],[195,450],[265,480]];
 
 for (let k = 0; k < GEN_LEVELS.length; k++) {
   const [seed, time] = GEN_LEVELS[k], L = k + 10;
-  const lv = generateLevel(L, seed);
-  LEVELS.push({ name: lv.name, hint: lv.hint, time, map: lv.map });
+  let cache = null;
+  // maps are built on demand so 600 levels load instantly
+  LEVELS.push({ name: genName(L), hint: genHint(L), time, get map() { return cache || (cache = generateLevel(L, seed).map); } });
 }
 </script>
 <script>
@@ -751,21 +949,35 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
   const MOVE_MS = 150, SLIDE_MS = 70, ENEMY_MS = 380;
   const fmt = s => s.toFixed(1) + "s";
   let boardView = null;
+  let dailyDate = null;
+  const DAILY_CACHE = {};
+  let tester = { on: false, inv: false, clock: false, drones: false };
+  try { const t = JSON.parse(localStorage.getItem("voltTester") || "null"); if (t) tester = { ...tester, ...t }; } catch (e) {}
+  const saveTester = () => { try { localStorage.setItem("voltTester", JSON.stringify(tester)); } catch (e) {} };
+  const cheatsOn = () => tester.on && (tester.inv || tester.clock || tester.drones);
+  let lastCycle = 0;
+  let cheated = false, lastFrame = 0, pausedAt = 0, resumeAfterPanel = false;
 
   // ---------- local progress ----------
   let progress = { unlocked: 1, best: {} };
   try {
-    const p = JSON.parse(localStorage.getItem("voltRunner2") || "null");
-    if (p) progress = p;
-    else { // levels 10+ were rebuilt for the new power-up rules: keep unlocks, drop old times
-      const o = JSON.parse(localStorage.getItem("voltRunner") || "null");
-      if (o) { progress.unlocked = o.unlocked || 1; for (const k in o.best || {}) if (+k < 9) progress.best[k] = o.best[k]; }
+    const p3 = JSON.parse(localStorage.getItem("voltRunner3") || "null");
+    if (p3) progress = p3;
+    else { // layouts were rebuilt over time: keep unlocks, keep best times only for levels that didn't change
+      const p2 = JSON.parse(localStorage.getItem("voltRunner2") || "null"), p1 = JSON.parse(localStorage.getItem("voltRunner") || "null");
+      const o = p2 || p1, keep = p2 ? 99 : 9;
+      if (o) { progress.unlocked = o.unlocked || 1; for (const k in o.best || {}) if (+k < keep) progress.best[k] = o.best[k]; }
     }
   } catch (e) {}
-  const save = () => { try { localStorage.setItem("voltRunner2", JSON.stringify(progress)); } catch (e) {} };
+  const save = () => { try { localStorage.setItem("voltRunner3", JSON.stringify(progress)); } catch (e) {} };
+  // leaderboard key per level: levels 100+ were rebuilt with solid-ice rooms, so they use fresh keys
+  const lbKey = i => i >= 99 ? (i + 1) + "b" : String(i + 1);
+  const validKey = k => /b$/.test(k) ? true : +k < 100;
 
   // ---------- leaderboard (Google Play Games, Android app) ----------
   const LB = { db: null };
+  // web-leaderboard helpers aren't used in the app
+  const keyBoard = () => [], levelBoard = () => [], submitKey = () => Promise.resolve(false), submitTime = () => Promise.resolve(false);
   const CAP = window.Capacitor;
   const isNative = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform());
   const plug = name => (isNative && CAP.Plugins && CAP.Plugins[name]) || null;
@@ -797,6 +1009,7 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
   }
   pgSignIn(false);
   window.__appSubmit = i => submitAll(Math.floor(i / 10));
+  window.__appDaily = t => { if (PG && pgSigned && LBIDS.daily) PG.submitScore({ leaderboardId: LBIDS.daily, score: Math.round(t * 1000) }).catch(() => {}); };
 
   function refreshBoard() {}
   function showBoard() {
@@ -810,6 +1023,7 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
       const tot = sectorTotal(s), id = (LBIDS.sectors || [])[s];
       rows += `<tr><td>${s + 1}</td><td>Levels ${s * 10 + 1}–${s * 10 + 10}<br><small style="color:var(--dim)">${tot !== null ? "total " + fmt(tot) : n + "/10 cleared"}</small></td><td>${PG && id ? `<button class="btn" data-lb="${s}">View</button>` : ""}</td></tr>`;
     }
+    rows = `<tr><td>📅</td><td>Daily challenge<br><small style="color:var(--dim)">${progress.daily && progress.daily[todayUTC()] !== undefined ? "today " + fmt(progress.daily[todayUTC()]) : "not played today"}</small></td><td>${PG && LBIDS.daily ? `<button class="btn" data-lbd="1">View</button>` : ""}</td></tr>` + rows;
     let note;
     if (!isNative) note = "Online leaderboards work in the Android app.";
     else if (!lbConfigured()) note = "Online leaderboards aren't set up yet.";
@@ -822,6 +1036,8 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
         if (!pgSigned && !(await pgSignIn(true))) { toast("Sign-in needed"); return; }
         PG.showLeaderboard({ leaderboardId: LBIDS.sectors[+b.dataset.lb] }).catch(() => toast("Couldn't open the leaderboard"));
       });
+      const dv = $("ovCard").querySelector("[data-lbd]");
+      if (dv) dv.onclick = async () => { if (!pgSigned && !(await pgSignIn(true))) { toast("Sign-in needed"); return; } PG.showLeaderboard({ leaderboardId: LBIDS.daily }).catch(() => toast("Couldn't open the leaderboard")); };
       if ($("allLb")) $("allLb").onclick = () => PG.showLeaderboard({}).catch(() => toast("Couldn't open leaderboards"));
       if ($("pgIn")) $("pgIn").onclick = async () => { await pgSignIn(true); renderBoard(); };
       $("bMenu").onclick = showMenu;
@@ -852,14 +1068,141 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
       o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + dur);
     } catch (e) {}
   }
-  $("soundBtn").onclick = () => { soundOn = !soundOn; $("soundBtn").textContent = soundOn ? "🔊" : "🔇"; };
+  try { soundOn = localStorage.getItem("voltSound") !== "off"; } catch (e) {}
+  function toggleSound() { soundOn = !soundOn; try { localStorage.setItem("voltSound", soundOn ? "on" : "off"); } catch (e) {} }
+
+  // ---------- music: original chill chiptune, played live with Web Audio ----------
+  const N = (name, oct) => { const i = "C C#D D#E F F#G G#A A#B ".indexOf(name.padEnd(2)) / 2; return 12 * (oct + 1) + i; };
+  const chord = (root, oct, ...iv) => { const r = N(root, oct); return { root: r, tones: iv.map(x => r + x) }; };
+  const SONGS = [
+    { name: "Circuit Drift", bpm: 82, seed: 11, swing: .08,
+      prog: [chord("F", 3, 0, 4, 7, 11), chord("E", 3, 0, 3, 7, 10), chord("D", 3, 0, 3, 7, 10), chord("C", 3, 0, 4, 7, 11)],
+      scale: [0, 2, 4, 7, 9].map(x => x + N("C", 5)) },
+    { name: "Deep Freeze", bpm: 88, seed: 23, swing: .1,
+      prog: [chord("A", 2, 0, 3, 7, 10), chord("F", 2, 0, 4, 7, 11), chord("C", 3, 0, 4, 7, 11), chord("G", 2, 0, 4, 7, 9)],
+      scale: [0, 3, 5, 7, 10].map(x => x + N("A", 4)) },
+    { name: "Void Lullaby", bpm: 74, seed: 37, swing: .06,
+      prog: [chord("D", 3, 0, 3, 7, 10), chord("A#", 2, 0, 4, 7, 11), chord("G", 2, 0, 3, 7, 10), chord("A", 2, 0, 5, 7, 10)],
+      scale: [0, 2, 3, 7, 9].map(x => x + N("D", 5)) },
+  ];
+  const songFor = i => i < 99 ? 0 : i < 299 ? 1 : 2;
+  let musicOn = true;
+  try { musicOn = localStorage.getItem("voltMusic") !== "off"; } catch (e) {}
+  const MUS = { song: -1, step: 0, next: 0, timer: 0, out: null, lead: null, pulse: null, noise: null };
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  function audio() {
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume(); } catch (e) {}
+    return ac;
+  }
+  function buildLead(song) {
+    // deterministic, sparse, chord-aware melody: 8 bars x 16 steps
+    const rnd = mulberry32(song.seed * 101), out = [];
+    const rhythms = [[0, 6, 10], [2, 8, 12, 14], [0, 3, 8], [4, 10], [0, 7, 12], [2, 6, 10, 14]];
+    let last = song.scale[2];
+    for (let bar = 0; bar < 8; bar++) {
+      const ch = song.prog[bar % 4], rh = rhythms[Math.floor(rnd() * rhythms.length)], notes = new Array(16).fill(null);
+      if (bar % 4 === 3 && rnd() < .5) { out.push(notes); continue; } // breathing room
+      for (const st of rh) {
+        const pool = song.scale.concat(song.scale.map(x => x + 12)).filter(x => Math.abs(x - last) <= 7);
+        const tonesPc = ch.tones.map(t => t % 12);
+        const fav = pool.filter(x => tonesPc.includes(x % 12));
+        const pickFrom = (rnd() < .7 && fav.length) ? fav : pool.length ? pool : song.scale;
+        last = pickFrom[Math.floor(rnd() * pickFrom.length)];
+        notes[st] = { m: last, len: rnd() < .4 ? 4 : 2 };
+      }
+      out.push(notes);
+    }
+    return out;
+  }
+  function musicGraph() {
+    if (MUS.out) return;
+    const c = ac;
+    MUS.out = c.createGain(); MUS.out.gain.value = 0;
+    const warm = c.createBiquadFilter(); warm.type = "lowpass"; warm.frequency.value = 3600;
+    MUS.out.connect(warm).connect(c.destination);
+    // echo for the lead
+    MUS.delay = c.createDelay(1); MUS.fb = c.createGain(); MUS.wet = c.createGain();
+    MUS.fb.gain.value = .32; MUS.wet.gain.value = .35;
+    MUS.delay.connect(MUS.fb).connect(MUS.delay); MUS.delay.connect(MUS.wet).connect(MUS.out);
+    // pulse waves (25% and 12.5% duty) for that 8-bit sound
+    const pw = d => { const n = 32, re = new Float32Array(n), im = new Float32Array(n); for (let k = 1; k < n; k++) im[k] = 2 / (k * Math.PI) * Math.sin(k * Math.PI * d); return c.createPeriodicWave(re, im); };
+    MUS.pulse25 = pw(.25); MUS.pulse12 = pw(.125);
+    const len = c.sampleRate * .5, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    MUS.noise = buf;
+  }
+  function tone(t, freq, dur, vol, kind, dest, opts = {}) {
+    const c = ac, o = c.createOscillator(), g = c.createGain();
+    if (kind === "tri") o.type = "triangle"; else o.setPeriodicWave(kind === "p12" ? MUS.pulse12 : MUS.pulse25);
+    o.frequency.setValueAtTime(freq, t);
+    if (opts.drop) o.frequency.exponentialRampToValueAtTime(opts.drop, t + dur);
+    if (opts.vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 5.2; lg.gain.value = freq * .006; l.connect(lg).connect(o.frequency); l.start(t + .08); l.stop(t + dur + .05); }
+    let node = o;
+    if (opts.lp) { const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = opts.lp; node = o.connect(f); }
+    g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(vol, t + .012);
+    g.gain.setTargetAtTime(vol * .6, t + .03, .08); g.gain.setTargetAtTime(.0001, t + dur * .85, .05);
+    node.connect(g).connect(dest); o.start(t); o.stop(t + dur + .3);
+    if (opts.send) g.connect(MUS.delay);
+  }
+  function hat(t, vol, hp, dur) {
+    const c = ac, src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = MUS.noise; f.type = hp ? "highpass" : "bandpass"; f.frequency.value = hp || 1800;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    src.connect(f).connect(g).connect(MUS.out); src.start(t); src.stop(t + dur + .02);
+  }
+  function scheduleStep(song, step, t) {
+    const bar = Math.floor(step / 16) % 8, st = step % 16, ch = song.prog[bar % 4], beat = 60 / song.bpm;
+    const s16 = beat / 4;
+    // bass
+    if (st === 0 || st === 8) tone(t, hz(ch.root - 12), beat * 1.6, .16, "tri", MUS.out);
+    if (st === 14) tone(t, hz(ch.root - 5), beat * .4, .1, "tri", MUS.out);
+    // muffled arpeggio on eighths
+    if (st % 2 === 0) { const order = [0, 1, 2, 3, 2, 1, 0, 2]; const n = ch.tones[order[(st / 2) % 8]] + 12; tone(t, hz(n), s16 * 1.8, .035, "p25", MUS.out, { lp: 1400 }); }
+    // lead
+    const ld = MUS.lead[bar][st]; if (ld) tone(t, hz(ld.m), s16 * ld.len * 1.1, .05, "p12", MUS.out, { vib: true, lp: 2600, send: true });
+    // lo-fi drums
+    if (st === 0 || st === 10) tone(t, 110, .14, .22, "tri", MUS.out, { drop: 40 });
+    if (st === 4 || st === 12) hat(t, .05, 0, .12);
+    if (st % 2 === 1) hat(t, st % 4 === 3 ? .025 : .015, 7000, .04);
+  }
+  function musicTick() {
+    if (!ac || MUS.song < 0) return;
+    const song = SONGS[MUS.song], s16 = 60 / song.bpm / 4;
+    while (MUS.next < ac.currentTime + .25) {
+      const sw = (MUS.step % 2) ? song.swing * s16 : 0;
+      try { scheduleStep(song, MUS.step, MUS.next + sw); } catch (e) {}
+      MUS.next += s16; MUS.step++;
+    }
+  }
+  function playSong(k) {
+    if (!musicOn || !audio()) return;
+    musicGraph();
+    if (MUS.song === k && MUS.timer) return;
+    const now = ac.currentTime;
+    MUS.out.gain.cancelScheduledValues(now);
+    MUS.out.gain.setTargetAtTime(0, now, .15); // fade the old loop
+    setTimeout(() => {
+      MUS.song = k; MUS.lead = buildLead(SONGS[k]); MUS.step = 0; MUS.next = ac.currentTime + .1;
+      MUS.out.gain.cancelScheduledValues(ac.currentTime); MUS.out.gain.setTargetAtTime(.55, ac.currentTime, .4);
+      if (!MUS.timer) MUS.timer = setInterval(musicTick, 40);
+    }, MUS.timer ? 500 : 0);
+  }
+  function stopMusic() {
+    if (MUS.out && ac) MUS.out.gain.setTargetAtTime(0, ac.currentTime, .15);
+    setTimeout(() => { clearInterval(MUS.timer); MUS.timer = 0; MUS.song = -1; }, 500);
+  }
+  function toggleMusic() { musicOn = !musicOn; try { localStorage.setItem("voltMusic", musicOn ? "on" : "off"); } catch (e) {} if (musicOn) playSong(songFor(levelIdx)); else stopMusic(); }
+  // browsers only allow audio after a tap or key press
+  const kick = () => { if (musicOn && MUS.song < 0) playSong(songFor(levelIdx)); };
+  addEventListener("pointerdown", kick); addEventListener("keydown", kick);
+  document.addEventListener("visibilitychange", () => { if (!ac) return; if (document.hidden) ac.suspend(); else ac.resume(); });
 
   // ---------- layout ----------
   function resize() {
     if (!S) return;
     const r = stage.getBoundingClientRect();
-    const maxCols = Math.min(S.w, 11);
-    ts = Math.max(24, Math.min(56, Math.floor(r.width / maxCols)));
+    const maxCols = Math.min(S.w, 9);
+    ts = Math.max(28, Math.min(64, Math.floor(r.width / maxCols)));
     viewW = Math.min(S.w, Math.floor(r.width / ts));
     viewH = Math.min(S.h, Math.floor(r.height / ts));
     const dpr = window.devicePixelRatio || 1;
@@ -872,10 +1215,14 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
   addEventListener("resize", resize);
 
   // ---------- flow ----------
-  const tierOf = i => i < 9 ? "Training" : i < 30 ? "Circuit I" : i < 55 ? "Circuit II" : i < 80 ? "Circuit III" : i < 100 ? "Overload" : i < 150 ? "Deep Grid" : "Portal Zone";
+  const tierOf = i => i < 9 ? "Training" : i < 30 ? "Circuit I" : i < 55 ? "Circuit II" : i < 80 ? "Circuit III" : i < 100 ? "Overload" : i < 150 ? "Deep Grid" : i < 200 ? "Portal Zone" : i < 300 ? "Hyper Grid" : i < 400 ? "Void Circuit" : i < 500 ? "Singularity" : "Overvolt";
+  const levelObj = () => dailyDate ? DAILY_CACHE[dailyDate] : LEVELS[levelIdx];
+  const restart = () => dailyDate ? startDaily(dailyDate, false) : restart();
   function startLevel(i, showIntro = true) {
+    dailyDate = null;
     boardView = null; mapOpen = false;
     levelIdx = i; S = loadLevel(i); timeLeft = LEVELS[i].time; playing = false; deathFx = 0;
+    if (musicOn && MUS.song >= 0 && MUS.song !== songFor(i)) playSong(songFor(i));
     $("lvlName").textContent = (i + 1) + ". " + LEVELS[i].name.toUpperCase();
     resize(); hud();
     const big = S.w > viewW || S.h > viewH;
@@ -886,34 +1233,124 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
       () => { $("goBtn").onclick = begin; if ($("peekBtn")) $("peekBtn").onclick = () => showMap(true); });
     else begin();
   }
-  function begin() { hideOverlay(); mapOpen = false; playing = true; startT = performance.now(); lastEnemy = startT; beep(660, .1, "triangle"); }
+  function begin() { hideOverlay(); mapOpen = false; playing = true; startT = performance.now(); lastEnemy = startT; lastFrame = startT; lastCycle = startT; cheated = cheatsOn(); beep(660, .1, "triangle"); }
   function die(msg) {
     playing = false; deathFx = performance.now(); beep(220, .4, "sawtooth", .06, 55);
-    setTimeout(() => overlay(`<h2>Shorted out!</h2><p>${esc(msg)}</p><div class="row"><button class="go" id="goBtn">Try again</button><button class="btn" id="mBtn">Levels</button></div>`, () => { $("goBtn").onclick = () => startLevel(levelIdx, false); $("mBtn").onclick = showMenu; }), 450);
+    setTimeout(() => overlay(`<h2>Shorted out!</h2><p>${esc(msg)}</p><div class="row"><button class="go" id="goBtn">Try again</button><button class="btn" id="mBtn">Levels</button></div>`, () => { $("goBtn").onclick = () => restart(); $("mBtn").onclick = showMenu; }), 450);
   }
   async function win() {
     playing = false; beep(523, .1, "triangle"); setTimeout(() => beep(784, .18, "triangle"), 100);
     const used = Math.round((performance.now() - startT) / 100) / 10;
+    if (dailyDate) return winDaily(used);
     const prev = progress.best[levelIdx];
-    const pb = prev === undefined || used < prev;
+    const record = !cheated;
+    const skinsBefore = SKINS.map((_, k) => skinUnlocked(k));
+    const pb = record && (prev === undefined || used < prev);
     if (pb) progress.best[levelIdx] = used;
-    progress.unlocked = Math.max(progress.unlocked, levelIdx + 2); save();
-    if (window.__appSubmit) window.__appSubmit(levelIdx);
+    if (record) { progress.unlocked = Math.max(progress.unlocked, levelIdx + 2); save(); if (window.__appSubmit) window.__appSubmit(levelIdx); }
     const last = levelIdx === LEVELS.length - 1, i = levelIdx;
     const render = (note) => overlay(last
       ? `<h1>ALL CLEAR!</h1><p>You beat all ${LEVELS.length} levels. Fully charged!</p><p>Time: ${fmt(used)}</p>${note}<div class="row"><button class="go" id="goBtn">Leaderboard</button></div>`
       : `<h2>Level ${i + 1} complete!</h2><p style="font-size:16px;color:var(--ink)">${fmt(used)}${pb && prev !== undefined ? " · new personal best!" : prev !== undefined ? ` · best ${fmt(prev)}` : ""}</p>${note}
          <div class="row"><button class="go" id="goBtn">Next level ▶</button><button class="btn" id="bBtn">🏆 Board</button><button class="btn" id="rBtn">↻ Retry</button></div>`,
-      () => { $("goBtn").onclick = () => last ? showBoard(i) : startLevel(i + 1); if ($("bBtn")) { $("bBtn").onclick = () => showBoard(i); $("rBtn").onclick = () => startLevel(i, false); } });
+      () => { $("goBtn").onclick = () => last ? showBoard(i) : startLevel(i + 1); if ($("bBtn")) { $("bBtn").onclick = () => showBoard(i); $("rBtn").onclick = () => restart(); } });
     const rankNote = () => {
       if (!LB.db) return "";
       if (!LB.uid || !LB.canWrite) return `<p style="font-size:12px">Times can't be posted from this view.</p>`;
       const b = levelBoard(i), k = b.findIndex(r => r.d.id === LB.uid);
       return k >= 0 ? `<p>🏆 Leaderboard rank <b style="color:var(--volt)">#${k + 1}</b> of ${b.length}</p>` : "";
     };
+    const newSkin = SKINS.findIndex((_, k) => skinUnlocked(k) && !skinsBefore[k]);
+    if (newSkin > 0) {
+      showUnlock(newSkin, () => render(""));
+      if (LB.db && LB.uid && LB.canWrite) submitTime(i, used);
+      return;
+    }
+    if (!record) { render(`<p style="font-size:12px"><span class="badge">TESTER</span> Cheats were on, so this time wasn't recorded.</p>`); return; }
     render(rankNote());
     if (LB.db && LB.uid && LB.canWrite) { await submitTime(i, used); if (!playing && !boardView && $("ov").classList.contains("show") && $("goBtn")) render(rankNote()); }
   }
+  // ---------- daily challenge ----------
+  const DAY = 864e5;
+  const todayUTC = () => new Date().toISOString().slice(0, 10);
+  const dayNum = d => Math.round(Date.parse(d + "T00:00:00Z") / DAY);
+  const fromNum = n => new Date(n * DAY).toISOString().slice(0, 10);
+  const weekStart = d => { const n = dayNum(d); return fromNum(n - ((n + 3) % 7)); }; // Monday
+  const weekDays = d => { const m = dayNum(weekStart(d)); return [0, 1, 2, 3, 4, 5, 6].map(k => fromNum(m + k)); };
+  const weekSkin = d => SKINS.findIndex(sk => sk.weekly === Math.floor((dayNum(weekStart(d)) + 3) / 7) % 12);
+  const dailyLabel = d => new Date(d + "T12:00:00Z").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  const weekCleared = d => weekDays(d).filter(x => progress.daily && progress.daily[x] !== undefined).length;
+  function getDaily(d) {
+    if (!DAILY_CACHE[d]) { const lv = generateDaily(d); if (lv) DAILY_CACHE[d] = lv; }
+    return DAILY_CACHE[d];
+  }
+  function untilReset() { const ms = (dayNum(todayUTC()) + 1) * DAY - Date.now(), h = Math.floor(ms / 36e5), m = Math.floor(ms % 36e5 / 6e4); return `${h}h ${m}m`; }
+  function showDaily() {
+    playing = false; boardView = null;
+    const today = todayUTC(), days = weekDays(today), wk = weekSkin(today), done = weekCleared(today);
+    const owned = skinUnlocked(wk);
+    const strip = days.map(d => {
+      const t = progress.daily && progress.daily[d], future = d > today, isToday = d === today;
+      const dn = new Date(d + "T12:00:00Z").toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" });
+      return `<button class="dday ${t !== undefined ? "done" : ""} ${isToday ? "today" : ""}" data-d="${d}" ${future && !tester.on ? "disabled" : ""}>${dn}<small>${t !== undefined ? "✓ " + fmt(t) : future ? "🔒" : isToday ? "today" : "catch up"}</small></button>`;
+    }).join("");
+    const lv = DAILY_CACHE[today];
+    overlay(`<h2>📅 Daily Challenge</h2>
+      <p style="font-size:13px">${esc(dailyLabel(today))}${lv ? " · " + esc(lv.name) : ""} · next one in ${untilReset()}</p>
+      <div class="dstrip">${strip}</div>
+      <div class="wkcard"><canvas width="128" height="128" data-sk="${wk}" data-show="1" style="width:76px;height:76px;border-radius:10px"></canvas>
+        <div style="text-align:left"><small style="color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:10px">This week's reward</small><br><b>${esc(SKINS[wk].name)}</b><br>
+        <small style="color:${owned ? "var(--good)" : "var(--dim)"}">${owned ? "✓ Unlocked" : `${done} of 7 dailies cleared this week`}</small></div></div>
+      <p style="font-size:12px">Small maps, mixed mechanics, very tight clock. Clear all 7 days of a week (catch-ups count) to keep that week's skin forever.</p>
+      ${tester.on ? `<div class="tester-row"><input class="lvlIn" id="dDate" type="date" value="${today}" style="width:160px"><button class="btn" id="dGo">🧪 Play date</button></div>` : ""}
+      <div class="row"><button class="go" id="goBtn">${progress.daily && progress.daily[today] !== undefined ? "Replay today" : "Play today's challenge"}</button><button class="btn" id="dBoard">🏆 Daily board</button><button class="btn" id="dBack">Back</button></div>`, () => {
+      paintSkinPreviews();
+      $("goBtn").onclick = () => startDaily(today);
+      $("ovCard").querySelectorAll(".dday:not([disabled])").forEach(b => b.onclick = () => startDaily(b.dataset.d));
+      $("dBoard").onclick = () => { boardView = { mode: "daily", date: today, level: levelIdx }; renderBoard(); };
+      $("dBack").onclick = showMenu;
+      if ($("dGo")) $("dGo").onclick = () => { const d = $("dDate").value; if (/^\d{4}-\d{2}-\d{2}$/.test(d)) startDaily(d); };
+    });
+  }
+  function startDaily(d, showIntro = true) {
+    if (!DAILY_CACHE[d]) {
+      overlay(`<h2>📅 Building the daily…</h2><p>Checking that today's map can be beaten.</p>`);
+      setTimeout(() => { if (getDaily(d)) startDaily(d, showIntro); else overlay(`<h2>Couldn't build this map</h2><div class="row"><button class="go" id="dBack2">Back</button></div>`, () => $("dBack2").onclick = showDaily); }, 30);
+      return;
+    }
+    const lv = DAILY_CACHE[d];
+    dailyDate = d; boardView = null; mapOpen = false;
+    S = loadLevelFrom(lv); timeLeft = lv.time; playing = false; deathFx = 0;
+    if (musicOn && MUS.song >= 0 && MUS.song !== 1) playSong(1);
+    $("lvlName").textContent = "DAILY · " + dailyLabel(d).toUpperCase();
+    resize(); hud();
+    const best = progress.daily && progress.daily[d];
+    if (showIntro) overlay(`<p style="font-size:11px;letter-spacing:.1em;text-transform:uppercase">Daily challenge · ${esc(dailyLabel(d))}</p><h2>${esc(lv.name)}</h2><p>${esc(lv.hint)}</p>
+      <p style="font-size:12px">${S.cells} cells · ${lv.time}s on the clock · ${S.w}×${S.h} map${best !== undefined ? ` · your best ${fmt(best)}` : ""}</p>
+      <div class="row"><button class="go" id="goBtn">Start</button><button class="btn" id="peekBtn">Peek map</button></div>`,
+      () => { $("goBtn").onclick = begin; $("peekBtn").onclick = () => showMap(true); });
+    else begin();
+  }
+  function winDaily(used) {
+    const d = dailyDate, record = !cheated;
+    progress.daily = progress.daily || {}; progress.weeklySkins = progress.weeklySkins || {};
+    const prev = progress.daily[d], pb = record && (prev === undefined || used < prev);
+    if (pb) progress.daily[d] = used;
+    let newSkin = -1;
+    const wk = weekSkin(d), sameWeek = weekStart(d) === weekStart(todayUTC());
+    if (record && sameWeek && weekCleared(d) === 7 && !skinUnlocked(wk)) { progress.weeklySkins[SKINS[wk].weekly] = weekStart(d); newSkin = wk; }
+    if (record) save();
+    if (record && LB.db && LB.uid && LB.canWrite) submitKey("d" + d, used);
+    if (record && window.__appDaily) window.__appDaily(used);
+    const rankOf = () => { const b = keyBoard("d" + d), k = b.findIndex(r => r.d.id === LB.uid); return k >= 0 ? `<p>🏆 Daily rank <b style="color:var(--volt)">#${k + 1}</b> of ${b.length}</p>` : ""; };
+    const render = () => overlay(`<h2>Daily cleared!</h2><p style="font-size:16px;color:var(--ink)">${fmt(used)}${!record ? "" : pb && prev !== undefined ? " · new personal best!" : prev !== undefined ? ` · best ${fmt(prev)}` : ""}</p>
+      ${record ? (sameWeek ? `<p>This week: <b style="color:var(--volt)">${weekCleared(d)} of 7</b> dailies cleared</p>` : "") + rankOf() : `<p style="font-size:12px"><span class="badge">TESTER</span> Cheats were on, so this time wasn't recorded.</p>`}
+      <div class="row"><button class="go" id="goBtn">📅 Daily menu</button><button class="btn" id="rBtn">↻ Retry</button><button class="btn" id="bBtn">🏆 Board</button></div>`, () => {
+      $("goBtn").onclick = showDaily; $("rBtn").onclick = restart; $("bBtn").onclick = () => { boardView = { mode: "daily", date: d, level: levelIdx }; renderBoard(); };
+    });
+    if (newSkin >= 0) showUnlock(newSkin, render, "for clearing every daily challenge this week"); else render();
+  }
+
   function overlay(html, after) { $("ovCard").innerHTML = html; $("ov").classList.add("show"); $("ovCard").scrollTop = 0; after && after(); }
   function hideOverlay() { $("ov").classList.remove("show"); }
   function showMenu() {
@@ -923,23 +1360,70 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
       const t = tierOf(i);
       if (t !== tier) { if (tier) html += "</div>"; html += `<div class="tier">${t}</div><div class="levels">`; tier = t; }
       const done = progress.best[i] !== undefined;
-      html += `<button data-i="${i}" class="${done ? "done" : ""}" ${i + 1 > progress.unlocked ? "disabled" : ""}>${i + 1}${done ? `<small>${fmt(progress.best[i])}</small>` : ""}</button>`;
+      html += `<button data-i="${i}" class="${done ? "done" : ""}" ${i + 1 > progress.unlocked && !tester.on ? "disabled" : ""}>${i + 1}${done ? `<small>${fmt(progress.best[i])}</small>` : ""}</button>`;
     });
     html += "</div>";
     overlay(`<h1>VOLT<br>RUNNER</h1><p>Collect every power cell, unlock the socket, reach the portal. ${LEVELS.length} levels.</p>
-      <div class="row"><button class="go" id="contBtn">${progress.unlocked > 1 ? "Continue: level " + Math.min(progress.unlocked, LEVELS.length) : "Play"}</button><button class="btn" id="mLb">🏆 Leaderboard</button></div>
+      <div class="row"><button class="go" id="contBtn">${progress.unlocked > 1 ? "Continue: level " + Math.min(progress.unlocked, LEVELS.length) : "Play"}</button><button class="btn" id="mDaily">📅 Daily${progress.daily && progress.daily[todayUTC()] !== undefined ? " ✓" : " ●"}</button><button class="btn" id="mLb">🏆 Leaderboard</button><button class="btn" id="mSk">🎨 Skins</button></div>
+      <div class="row"><button class="btn" id="musBtn">${musicOn ? "🎵 Music on" : "🎵 Music off"}</button><button class="btn" id="sndBtn">${soundOn ? "🔊 Sound on" : "🔇 Sound off"}</button><button class="btn ${tester.on ? "on" : ""}" id="tstBtn">🧪 Tester mode: ${tester.on ? "ON" : "OFF"}</button></div>
+      ${tester.on ? `<div class="tester-row"><input class="lvlIn" id="goLvl" type="number" min="1" max="${LEVELS.length}" placeholder="Level #" inputmode="numeric"><button class="btn" id="goLvlBtn">Go to level</button></div><p style="font-size:12px">Tester mode unlocks every level. Turn on cheats from the 🧪 button while playing.</p>` : ""}
       ${html}<p style="font-size:12px">Swipe or use the pad · Arrow keys / WASD · R retry · M map</p>`,
       () => {
+        $("sndBtn").onclick = () => { toggleSound(); showMenu(); };
+        $("musBtn").onclick = () => { toggleMusic(); showMenu(); };
+        $("tstBtn").onclick = () => { tester.on = !tester.on; saveTester(); updateTesterUI(); showMenu(); };
+        if ($("goLvlBtn")) {
+          const go = () => { const n = parseInt($("goLvl").value, 10); if (n >= 1 && n <= LEVELS.length) startLevel(n - 1); else toast("Enter a level from 1 to " + LEVELS.length); };
+          $("goLvlBtn").onclick = go; $("goLvl").onkeydown = e => { if (e.key === "Enter") go(); };
+        }
         $("ovCard").querySelectorAll("[data-i]").forEach(b => b.onclick = () => startLevel(+b.dataset.i));
         $("contBtn").onclick = () => startLevel(Math.min(progress.unlocked, LEVELS.length) - 1);
         $("mLb").onclick = () => showBoard(Math.min(progress.unlocked, LEVELS.length) - 1);
+        $("mSk").onclick = () => showSkins("menu");
+        $("mDaily").onclick = showDaily;
       });
   }
   $("menuBtn").onclick = showMenu;
-  $("restartBtn").onclick = () => startLevel(levelIdx, false);
+  function updateTesterUI() { $("testBtn").hidden = !tester.on; }
+  function showTester() {
+    if (playing) { resumeAfterPanel = true; pausedAt = performance.now(); playing = false; }
+    const tog = (id, key, label) => `<button class="btn ${tester[key] ? "on" : ""}" data-t="${key}">${tester[key] ? "✔ " : ""}${label}</button>`;
+    overlay(`<h2>🧪 Tester tools</h2>
+      <p style="font-size:12px">${dailyDate ? "Daily challenge " + esc(dailyLabel(dailyDate)) : `Level ${levelIdx + 1} of ${LEVELS.length}`}: ${esc(levelObj().name)}. The clock is paused while this is open.</p>
+      <div class="tester-row"><button class="btn" id="tPrev">◀ Prev</button><input class="lvlIn" id="tLvl" type="number" min="1" max="${LEVELS.length}" value="${levelIdx + 1}" inputmode="numeric"><button class="btn" id="tGo">Go</button><button class="btn" id="tNext">Next ▶</button></div>
+      <div class="tester-row">${tog("tInv", "inv", "Invincible")}${tog("tClk", "clock", "Freeze clock")}${tog("tDr", "drones", "Freeze drones")}</div>
+      <div class="tester-skin">
+        <b style="font:700 12px Inter;color:var(--dim);letter-spacing:.08em;text-transform:uppercase">Skin test</b>
+        <div class="tester-row"><button class="btn" id="skPrev">◀</button><canvas width="128" height="128" data-sk="${skinIdx}" style="width:72px;height:72px;border-radius:10px"></canvas><button class="btn" id="skNext">▶</button></div>
+        <p style="font-size:13px;color:var(--ink)">${esc(SKINS[skinIdx].name)} <span style="color:var(--dim)">· unlocks at level ${SKINS[skinIdx].level || "start"}${skinUnlocked(skinIdx) ? " · earned" : ""}</span></p>
+        <div class="tester-row"><button class="btn" id="skUnlock">Preview unlock screen</button>${tog("tCyc", "cycle", "Auto-cycle skins")}</div>
+      </div>
+      <p style="font-size:12px">Runs with any cheat on aren't saved as best times or posted to the leaderboard.</p>
+      <div class="row">${resumeAfterPanel ? `<button class="go" id="tResume">Resume</button>` : ""}<button class="btn" id="tRestart">↻ Restart level</button></div>`, () => {
+      const jump = n => { resumeAfterPanel = false; if (n >= 1 && n <= LEVELS.length) startLevel(n - 1); else toast("Enter a level from 1 to " + LEVELS.length); };
+      $("tPrev").onclick = () => jump(Math.max(1, levelIdx));
+      $("tNext").onclick = () => jump(Math.min(LEVELS.length, levelIdx + 2));
+      $("tGo").onclick = () => jump(parseInt($("tLvl").value, 10));
+      $("tLvl").onkeydown = e => { if (e.key === "Enter") $("tGo").click(); };
+      $("ovCard").querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
+        tester[b.dataset.t] = !tester[b.dataset.t]; saveTester();
+        if (tester[b.dataset.t] && resumeAfterPanel && b.dataset.t !== "cycle") cheated = true;
+        showTester();
+      });
+      paintSkinPreviews();
+      $("skPrev").onclick = () => { setSkin((skinIdx + SKINS.length - 1) % SKINS.length); showTester(); };
+      $("skNext").onclick = () => { setSkin((skinIdx + 1) % SKINS.length); showTester(); };
+      $("skUnlock").onclick = () => showUnlock(skinIdx, showTester);
+      if ($("tResume")) $("tResume").onclick = () => { resumeAfterPanel = false; lastCycle = performance.now(); startT += performance.now() - pausedAt; playing = true; hideOverlay(); };
+      $("tRestart").onclick = () => { resumeAfterPanel = false; restart(); };
+    });
+  }
+  $("testBtn").onclick = showTester;
+  updateTesterUI();
+  $("restartBtn").onclick = () => restart();
 
   // ---------- full map peek ----------
-  const MAPC = { "#": "#3a4670", ".": "#1d263f", ",": "#5b4330", "w": "#1462b8", "l": "#e0451f", "i": "#a9e4f5", "c": "#ffd43b", "E": "#b388ff", "S": "#3ddc84", "R": "#ff5a5f", "B": "#4d8dff", "Y": "#ffd43b", "r": "#ff5a5f", "b": "#4d8dff", "y": "#ffd43b", "x": "#a8743f", "h": "#4dd4ff", "f": "#ff8a3d", " ": "#080b14", "C": "#ffd43b", "/": "#ff6bd6", "\\": "#ff6bd6", "1": "#3ddc84", "2": "#ff8a3d", "3": "#ff6bd6", "4": "#ffffff" };
+  const MAPC = { "#": "#3a4670", ".": "#1d263f", ",": "#5b4330", "w": "#1462b8", "l": "#e0451f", "i": "#a9e4f5", "c": "#ffd43b", "E": "#b388ff", "S": "#3ddc84", "R": "#ff5a5f", "B": "#4d8dff", "Y": "#ffd43b", "r": "#ff5a5f", "b": "#4d8dff", "y": "#ffd43b", "x": "#a8743f", "h": "#4dd4ff", "f": "#ff8a3d", " ": "#080b14", "C": "#ffd43b", "/": "#ff6bd6", "\\": "#ff6bd6", "1": "#3ddc84", "2": "#ff8a3d", "3": "#ff6bd6", "4": "#ffffff", "5": "#ff5a5f", "6": "#4d8dff" };
   function showMap(fromIntro) {
     if (!S) return;
     if (mapOpen) { closeMap(); return; }
@@ -952,7 +1436,7 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
       const m = $("mapCv").getContext("2d");
       for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) {
         const t = tileAt(S, x, y); m.fillStyle = MAPC[t] || "#1d263f";
-        if ("crbyhfC1234".includes(t)) { m.fillStyle = "#1d263f"; m.fillRect(x * px, y * px, px, px); m.fillStyle = MAPC[t]; m.fillRect(x * px + px * .2, y * px + px * .2, px * .6, px * .6); }
+        if ("crbyhfC123456".includes(t)) { m.fillStyle = "#1d263f"; m.fillRect(x * px, y * px, px, px); m.fillStyle = MAPC[t]; m.fillRect(x * px + px * .2, y * px + px * .2, px * .6, px * .6); }
         else m.fillRect(x * px, y * px, px, px);
       }
       for (const e of S.enemies) { m.fillStyle = "#ff3d5a"; m.fillRect(e.x * px + px * .15, e.y * px + px * .15, px * .7, px * .7); }
@@ -998,6 +1482,7 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
     if (S.teleported) { beep(400, .18, "sine", .06, 1200); S.teleported = false; }
     if (before.cells > 0 && S.cells === 0) toast("All cells! Socket unlocked ⚡");
     hud();
+    if (S.dead && tester.on && tester.inv) { toast("🧪 Invincible: " + S.dead); S.dead = null; }
     if (S.dead) die(S.dead); else if (S.won) win();
   }
 
@@ -1006,7 +1491,7 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
   addEventListener("keydown", e => {
     if (e.target && e.target.tagName === "INPUT") return;
     if (keyMap[e.key]) { e.preventDefault(); if (!heldDir || heldDir + "" !== keyMap[e.key] + "") { heldDir = keyMap[e.key]; doMove(...heldDir); } }
-    else if (e.key === "r" || e.key === "R") startLevel(levelIdx, false);
+    else if (e.key === "r" || e.key === "R") restart();
     else if (e.key === "m" || e.key === "M") { if (playing || mapOpen) showMap(false); }
     else if (e.key === "Enter" || e.key === " ") { const g = $("goBtn") || $("mapClose"); if (g && $("ov").classList.contains("show")) { e.preventDefault(); g.click(); } }
   });
@@ -1043,12 +1528,19 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
         const doors = gateCount();
         slideStep(S); afterStep(before, doors);
       } else if (!S.sliding && heldDir && !mapOpen && now - lastMove > MOVE_MS) doMove(...heldDir);
-      if (playing && S.enemies.length && now - lastEnemy > ENEMY_MS) { lastEnemy = now; moveEnemies(S); if (S.dead) die(S.dead); }
+      if (playing && S.enemies.length && !(tester.on && tester.drones) && now - lastEnemy > ENEMY_MS) {
+        lastEnemy = now; moveEnemies(S);
+        if (S.dead && tester.on && tester.inv) { toast("🧪 Invincible: " + S.dead); S.dead = null; }
+        if (S.dead) die(S.dead);
+      }
+      if (playing && tester.on && tester.clock) startT += now - lastFrame;
+      if (playing && tester.on && tester.cycle && now - lastCycle > 3000) { lastCycle = now; setSkin((skinIdx + 1) % SKINS.length); toast("🎨 " + SKINS[skinIdx].name); }
       if (playing) {
-        const left = LEVELS[levelIdx].time - Math.floor((now - startT) / 1000);
+        const left = levelObj().time - Math.floor((now - startT) / 1000);
         if (left !== timeLeft) { timeLeft = left; hud(); if (timeLeft <= 0) { S.dead = "Out of time! Move faster."; die(S.dead); } else if (timeLeft <= 10) beep(880, .04, "square", .02); }
       }
     }
+    lastFrame = now;
     if (S) draw(now);
     requestAnimationFrame(loop);
   }
@@ -1124,8 +1616,8 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
     if (t === ",") { ctx.fillStyle = "#5b4330"; ctx.fillRect(px, py, s, s); ctx.fillStyle = "#6e523a"; for (let k = 0; k < 4; k++) ctx.fillRect(px + s * ((k * .37 + .1) % .8), py + s * ((k * .53 + .15) % .8), s * .1, s * .08); return; }
     floor(px, py, x, y);
     if (t === "c") { drawCell(px, py, x, y, now); return; }
-    if ("1234".includes(t)) {
-      const col = { 1: "#3ddc84", 2: "#ff8a3d", 3: "#ff6bd6", 4: "#ffffff" }[t];
+    if (PORTAL_CH.includes(t)) {
+      const col = { 1: "#3ddc84", 2: "#ff8a3d", 3: "#ff6bd6", 4: "#ffffff", 5: "#ff5a5f", 6: "#4d8dff" }[t];
       ctx.save(); ctx.translate(px + m, py + m);
       ctx.fillStyle = "#0b0f1d"; ctx.beginPath(); ctx.arc(0, 0, s * .38, 0, 7); ctx.fill();
       ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = s * .35; ctx.lineWidth = s * .08;
@@ -1173,6 +1665,118 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
       else { ctx.beginPath(); ctx.moveTo(px + m, py + s * .3); ctx.quadraticCurveTo(px + s * .7, py + s * .55, px + m, py + s * .7); ctx.quadraticCurveTo(px + s * .3, py + s * .55, px + m, py + s * .3); ctx.fill(); }
     }
   }
+  // ---------- skins ----------
+  const SKINS = [
+    { id: "classic", name: "Classic Volt", level: 0, body: "#e8ecf7", belly: "#d3dbee", visor: "#16213d", eye: "#4dd4ff", tip: "#ffd43b", stem: "#cfd8f0", mouth: "#ffd43b" },
+    { id: "copper", name: "Copper Bolt", level: 50, body: "#c97d4e", belly: "#a6603a", visor: "#2a1408", eye: "#ffb347", tip: "#ffe0a3", stem: "#e0a37a", mouth: "#ffe0a3", extra: "rivets" },
+    { id: "frost", name: "Frost Runner", level: 100, body: "#c4ecff", belly: "#92d5f5", visor: "#0f3550", eye: "#ffffff", tip: "#ffffff", stem: "#d6f1ff", mouth: "#7fd8ff", glow: "#a9e4f5", extra: "frost" },
+    { id: "neon", name: "Neon Phantom", level: 150, body: "#1d1233", belly: "#26163f", visor: "#0a0614", eye: "#ff6bd6", tip: "#ff6bd6", stem: "#ff6bd6", mouth: "#ff6bd6", outline: "#ff6bd6", glow: "#ff6bd6" },
+    { id: "gold", name: "Gold Circuit", level: 200, body: "#ffd43b", belly: "#e3b21c", visor: "#3a2a00", eye: "#fff6cc", tip: "#ffffff", stem: "#ffe98a", mouth: "#ffffff", glow: "#ffd43b", extra: "circuit", tipShape: "star" },
+    { id: "lava", name: "Lava Core", level: 300, body: "#2e2222", belly: "#211818", visor: "#120b0b", eye: "#ff7a1a", tip: "#ff7a1a", stem: "#5a4040", mouth: "#ff7a1a", glow: "#ff5a1a", extra: "cracks", tipShape: "flame" },
+    { id: "void", name: "Void Walker", level: 400, body: "#15102b", belly: "#0e0a1e", visor: "#000000", eye: "#c3a6ff", tip: "#b388ff", stem: "#3d2f6e", mouth: "#b388ff", outline: "#7c4dff", glow: "#7c4dff", extra: "stars" },
+    { id: "plasma", name: "Plasma King", level: 500, body: "#2f7bff", belly: "#1f5fd6", visor: "#061a40", eye: "#e8f6ff", tip: "#ffd43b", stem: "#9cc8ff", mouth: "#e8f6ff", glow: "#4dd4ff", extra: "crown" },
+    { id: "prism", name: "Prism Legend", level: 600, rainbow: true, visor: "#0b0b1a", eye: "#ffffff", tip: "#ffffff", stem: "#ffffff", mouth: "#ffffff", glow: "#ffffff", extra: "sparkle" },
+    // weekly challenge skins: clear all 7 dailies in a week to earn that week's skin (12 rotate)
+    { id: "sunrise", name: "Sunrise Scout", weekly: 0, grad: ["#ffb36b", "#ff6b8b"], belly: "#e8557a", visor: "#3a1420", eye: "#ffe9a8", tip: "#ffd43b", stem: "#ffd1a8", mouth: "#ffe9a8", tipShape: "sun", glow: "#ffb36b" },
+    { id: "midnight", name: "Midnight Courier", weekly: 1, body: "#1d2b5e", belly: "#152147", visor: "#05091a", eye: "#ffd43b", tip: "#ffd43b", stem: "#6c7fbf", mouth: "#ffd43b", tipShape: "moon", pattern: "dots", pc: "rgba(255,255,255,.55)" },
+    { id: "tidal", name: "Tidal Drift", weekly: 2, body: "#2ec4b6", belly: "#1f9e93", visor: "#06302c", eye: "#e8fffb", tip: "#e8fffb", stem: "#a0f0e8", mouth: "#e8fffb", pattern: "waves", pc: "rgba(255,255,255,.6)" },
+    { id: "ember", name: "Ember Fox", weekly: 3, body: "#ff6a2a", belly: "#fff1e6", visor: "#2a0e05", eye: "#ffe066", tip: "#ffe066", stem: "#ffb38a", mouth: "#2a0e05", ears: "#ff6a2a" },
+    { id: "aurora", name: "Aurora", weekly: 4, aurora: true, belly: "#1b3a4b", visor: "#061019", eye: "#c8fff0", tip: "#9dffcb", stem: "#9dffcb", mouth: "#c8fff0", glow: "#7cf3c0" },
+    { id: "glitch", name: "Glitch", weekly: 5, body: "#e8ecf7", belly: "#c9d0e6", visor: "#111", eye: "#3dff8a", tip: "#ff3d9a", stem: "#888", mouth: "#3dff8a", glitch: true },
+    { id: "candy", name: "Candy Pop", weekly: 6, body: "#ff9ccf", belly: "#ff7ab8", visor: "#4a1030", eye: "#ffffff", tip: "#7ef0ff", stem: "#ffd6ec", mouth: "#ffffff", pattern: "stripes", pc: "rgba(255,255,255,.65)" },
+    { id: "camo", name: "Jungle Camo", weekly: 7, body: "#5c7a3a", belly: "#4a6230", visor: "#141d0a", eye: "#d7ff6b", tip: "#d7ff6b", stem: "#8aa660", mouth: "#d7ff6b", pattern: "camo", pc: "#3b4f24" },
+    { id: "holo", name: "Holo Ghost", weekly: 8, body: "#9fe8ff", belly: "#7fd0f0", visor: "#0a2a3a", eye: "#ffffff", tip: "#ffffff", stem: "#cff4ff", mouth: "#ffffff", holo: true, glow: "#9fe8ff" },
+    { id: "crt", name: "Retro CRT", weekly: 9, body: "#d9cfb4", belly: "#c4b896", visor: "#0b2a0b", eye: "#4dff6a", tip: "#ff5a5f", stem: "#9c9278", mouth: "#4dff6a", scan: true },
+    { id: "thunder", name: "Thunderbolt", weekly: 10, body: "#ffd43b", belly: "#2a2a2a", visor: "#1a1a1a", eye: "#ffffff", tip: "#ffffff", stem: "#c9a800", mouth: "#ffd43b", pattern: "hazard", pc: "#1a1a1a", tipShape: "bolt" },
+    { id: "zen", name: "Zen Garden", weekly: 11, body: "#a8c3a0", belly: "#8fae86", visor: "#1e2b1b", eye: "#f2ffe8", tip: "#5fae5a", stem: "#7a9a72", mouth: "#f2ffe8", tipShape: "leaf" },
+  ];
+  const skinUnlocked = k => { const sk = SKINS[k]; if (sk.weekly !== undefined) return !!(progress.weeklySkins && progress.weeklySkins[sk.weekly]); return sk.level === 0 || progress.best[sk.level - 1] !== undefined; };
+  const skinUsable = k => skinUnlocked(k) || tester.on;
+  let skinIdx = 0;
+  try { const v = +localStorage.getItem("voltSkin"); if (v > 0 && v < SKINS.length) skinIdx = v; } catch (e) {}
+  const currentSkin = () => SKINS[skinUsable(skinIdx) ? skinIdx : 0];
+  function setSkin(k) { skinIdx = k; try { localStorage.setItem("voltSkin", String(k)); } catch (e) {} }
+
+  // Draws the robot centred on (0,0) of context c at tile size s.
+  function drawRobot(c, s, sk, facing, now, locked) {
+    const rrc = (x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
+    const hue = (now / 12) % 360;
+    const col = k => {
+      if (locked) return "#20283f";
+      if (sk.rainbow && (k === "body" || k === "belly")) return `hsl(${(hue + (k === "belly" ? 40 : 0)) % 360},85%,${k === "belly" ? 55 : 65}%)`;
+      if (k === "body" && (sk.grad || sk.aurora)) {
+        const gr = c.createLinearGradient(0, -s * .27, 0, s * .25);
+        if (sk.aurora) { const h1 = (150 + Math.sin(now / 900) * 40), h2 = (270 + Math.sin(now / 700) * 40); gr.addColorStop(0, `hsl(${h1},80%,60%)`); gr.addColorStop(1, `hsl(${h2},70%,55%)`); }
+        else { gr.addColorStop(0, sk.grad[0]); gr.addColorStop(1, sk.grad[1]); }
+        return gr;
+      }
+      return sk[k];
+    };
+    if (sk.holo && !locked) c.globalAlpha *= .72 + Math.sin(now / 250) * .12;
+    if (sk.glitch && !locked && Math.floor(now / 90) % 9 === 0) {
+      // occasional colour-split glitch frame
+      c.save(); c.globalAlpha *= .6; c.translate(s * .04, 0); c.fillStyle = "#ff2f8e"; rrc(-s * .28, -s * .27, s * .56, s * .52, s * .16); c.fill();
+      c.translate(-s * .08, 0); c.fillStyle = "#2fe6ff"; rrc(-s * .28, -s * .27, s * .56, s * .52, s * .16); c.fill(); c.restore();
+    }
+    if (sk.ears && !locked) {
+      c.fillStyle = sk.ears;
+      for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * s * .26, -s * .16); c.lineTo(sd * s * .28, -s * .4); c.lineTo(sd * s * .1, -s * .26); c.closePath(); c.fill(); }
+      c.fillStyle = "#2a0e05"; for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * s * .24, -s * .2); c.lineTo(sd * s * .255, -s * .33); c.lineTo(sd * s * .15, -s * .25); c.closePath(); c.fill(); }
+    }
+    const glow = !locked && sk.glow;
+    // antenna (crown replaces it)
+    if (sk.extra !== "crown") {
+      c.strokeStyle = col("stem"); c.lineWidth = s * .04; c.beginPath(); c.moveTo(0, -s * .26); c.lineTo(0, -s * .38); c.stroke();
+      c.fillStyle = col("tip"); c.shadowColor = col("tip"); c.shadowBlur = locked ? 0 : s * .25;
+      if (sk.tipShape === "star") { c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? s * .035 : s * .085, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(Math.cos(a) * r, -s * .41 + Math.sin(a) * r); } c.closePath(); c.fill(); }
+      else if (sk.tipShape === "sun") { c.beginPath(); c.arc(0, -s * .41, s * .045, 0, 7); c.fill(); c.strokeStyle = sk.tip; c.lineWidth = s * .018; c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + now / 1500; c.moveTo(Math.cos(a) * s * .065, -s * .41 + Math.sin(a) * s * .065); c.lineTo(Math.cos(a) * s * .095, -s * .41 + Math.sin(a) * s * .095); } c.stroke(); }
+      else if (sk.tipShape === "moon") { c.beginPath(); c.arc(0, -s * .41, s * .055, 0, 7); c.fill(); c.shadowBlur = 0; c.fillStyle = col("body") instanceof CanvasGradient ? "#000" : col("body"); c.beginPath(); c.arc(s * .025, -s * .425, s * .045, 0, 7); c.fill(); }
+      else if (sk.tipShape === "bolt") { c.beginPath(); c.moveTo(s * .02, -s * .5); c.lineTo(-s * .045, -s * .4); c.lineTo(0, -s * .4); c.lineTo(-s * .02, -s * .33); c.lineTo(s * .045, -s * .43); c.lineTo(0, -s * .43); c.closePath(); c.fill(); }
+      else if (sk.tipShape === "leaf") { c.save(); c.translate(0, -s * .41); c.rotate(-.6 + Math.sin(now / 600) * .15); c.beginPath(); c.ellipse(s * .03, 0, s * .065, s * .03, 0, 0, 7); c.fill(); c.restore(); }
+      else if (sk.tipShape === "flame") { const f = 1 + Math.sin(now / 90) * .15; c.beginPath(); c.moveTo(0, -s * (.36 + .14 * f)); c.quadraticCurveTo(s * .07, -s * .4, 0, -s * .35); c.quadraticCurveTo(-s * .07, -s * .4, 0, -s * (.36 + .14 * f)); c.fill(); }
+      else { c.beginPath(); c.arc(0, -s * .4, s * .05, 0, 7); c.fill(); }
+      c.shadowBlur = 0;
+    }
+    // body
+    if (glow) { c.shadowColor = sk.glow; c.shadowBlur = s * .3; }
+    c.fillStyle = col("body"); rrc(-s * .28, -s * .27, s * .56, s * .52, s * .16); c.fill(); c.shadowBlur = 0;
+    c.save(); rrc(-s * .28, -s * .27, s * .56, s * .52, s * .16); c.clip();
+    c.fillStyle = col("belly"); c.fillRect(-s * .28, s * .08, s * .56, s * .2);
+    if (!locked) {
+      if (sk.pattern === "stripes") { c.strokeStyle = sk.pc; c.lineWidth = s * .05; c.beginPath(); for (let i = -4; i < 5; i++) { c.moveTo(s * (i * .12 - .3), s * .3); c.lineTo(s * (i * .12 + .3), -s * .3); } c.stroke(); }
+      if (sk.pattern === "hazard") { c.fillStyle = sk.pc; for (let i = -4; i < 5; i++) { c.beginPath(); c.moveTo(s * (i * .14 - .02), s * .08); c.lineTo(s * (i * .14 + .05), s * .08); c.lineTo(s * (i * .14 - .02), s * .28); c.lineTo(s * (i * .14 - .09), s * .28); c.closePath(); c.fill(); } }
+      if (sk.pattern === "waves") { c.strokeStyle = sk.pc; c.lineWidth = s * .025; for (const yy of [.12, .2]) { c.beginPath(); for (let i = 0; i <= 12; i++) { const x = -s * .3 + i * s * .05; c.lineTo(x, s * yy + Math.sin(i * 1.2 + now / 300) * s * .02); } c.stroke(); } }
+      if (sk.pattern === "camo") { c.fillStyle = sk.pc; for (const [bx, by, br] of [[-.18, -.2, .07], [.12, -.22, .06], [.2, .05, .08], [-.1, .14, .07], [-.24, .02, .05], [.04, .2, .05]]) { c.beginPath(); c.ellipse(s * bx, s * by, s * br, s * br * .7, bx * 3, 0, 7); c.fill(); } }
+      if (sk.pattern === "dots") { c.fillStyle = sk.pc; for (let i = 0; i < 9; i++) { const a = Math.sin(now / 400 + i * 2.1) * .5 + .5; c.globalAlpha = .3 + a * .7; c.fillRect(s * (((i * 41) % 52) / 100 - .26), s * (((i * 29) % 44) / 100 - .24), s * .02, s * .02); } c.globalAlpha = 1; }
+      if (sk.extra === "circuit") { c.strokeStyle = "rgba(120,80,0,.55)"; c.lineWidth = s * .02; c.beginPath(); c.moveTo(-s * .26, s * .14); c.lineTo(-s * .12, s * .14); c.lineTo(-s * .08, s * .2); c.moveTo(s * .26, s * .12); c.lineTo(s * .14, s * .12); c.lineTo(s * .1, s * .2); c.stroke(); }
+      if (sk.extra === "cracks") { c.strokeStyle = `rgba(255,${110 + Math.sin(now / 200) * 40 | 0},30,.9)`; c.shadowColor = "#ff5a1a"; c.shadowBlur = s * .12; c.lineWidth = s * .025; c.beginPath(); c.moveTo(-s * .22, s * .25); c.lineTo(-s * .15, s * .12); c.lineTo(-s * .2, s * .05); c.moveTo(s * .25, s * .2); c.lineTo(s * .15, s * .14); c.lineTo(s * .18, s * .05); c.stroke(); c.shadowBlur = 0; }
+      if (sk.extra === "stars") { for (let i = 0; i < 7; i++) { const a = Math.sin(now / 300 + i * 1.7) * .5 + .5; c.fillStyle = `rgba(255,255,255,${.25 + a * .75})`; c.fillRect(s * (((i * 37) % 50) / 100 - .25), s * (((i * 53) % 46) / 100 - .24), s * .025, s * .025); } }
+      if (sk.extra === "frost") { c.strokeStyle = "rgba(255,255,255,.9)"; c.lineWidth = s * .018; for (const [fx, fy] of [[-.2, -.2], [.21, .17]]) { c.beginPath(); for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; c.moveTo(s * (fx + Math.cos(a) * .05), s * (fy + Math.sin(a) * .05)); c.lineTo(s * (fx - Math.cos(a) * .05), s * (fy - Math.sin(a) * .05)); } c.stroke(); } }
+      if (sk.extra === "rivets") { c.fillStyle = "#ffd9b0"; for (const [rx, ry] of [[-.22, -.2], [.22, -.2], [-.22, .2], [.22, .2]]) { c.beginPath(); c.arc(s * rx, s * ry, s * .018, 0, 7); c.fill(); } }
+    }
+    c.restore();
+    if (sk.outline && !locked) { c.strokeStyle = sk.outline; c.lineWidth = s * .03; c.shadowColor = sk.outline; c.shadowBlur = s * .2; rrc(-s * .28, -s * .27, s * .56, s * .52, s * .16); c.stroke(); c.shadowBlur = 0; }
+    // visor + eyes + mouth
+    c.fillStyle = col("visor"); rrc(-s * .21, -s * .17, s * .42, s * .22, s * .08); c.fill();
+    if (!locked) {
+      const [fx, fy] = facing; c.fillStyle = sk.eye; c.shadowColor = sk.eye; c.shadowBlur = s * .15;
+      for (const ex of [-.09, .09]) { c.beginPath(); c.arc(s * (ex + fx * .05), s * (-.06 + fy * .03), s * .045, 0, 7); c.fill(); }
+      c.shadowBlur = 0; c.fillStyle = sk.mouth; c.fillRect(-s * .06, s * .1, s * .12, s * .06);
+      if (sk.scan) { c.fillStyle = "rgba(0,0,0,.35)"; for (let yy = -s * .17; yy < s * .05; yy += s * .03) c.fillRect(-s * .21, yy + (now / 40 % 3) * s * .01, s * .42, s * .01); }
+      if (sk.holo) { const p = ((now / 900) % 1.4) - .2; c.save(); rrc(-s * .28, -s * .27, s * .56, s * .52, s * .16); c.clip(); c.fillStyle = "rgba(255,255,255,.35)"; c.fillRect(-s * .3, -s * .3 + p * s * .6, s * .6, s * .06); c.restore(); }
+    } else { c.fillStyle = "#8a94b3"; c.font = `700 ${Math.floor(s * .2)}px Inter, sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("🔒", 0, -s * .05); }
+    if (locked) return;
+    if (sk.extra === "crown") {
+      c.fillStyle = "#ffd43b"; c.shadowColor = "#ffd43b"; c.shadowBlur = s * .2;
+      c.beginPath(); c.moveTo(-s * .17, -s * .27); c.lineTo(-s * .17, -s * .4); c.lineTo(-s * .085, -s * .32); c.lineTo(0, -s * .45); c.lineTo(s * .085, -s * .32); c.lineTo(s * .17, -s * .4); c.lineTo(s * .17, -s * .27); c.closePath(); c.fill();
+      c.shadowBlur = 0; c.fillStyle = "#ff5a5f"; c.beginPath(); c.arc(0, -s * .32, s * .025, 0, 7); c.fill();
+      c.strokeStyle = "rgba(170,230,255,.9)"; c.lineWidth = s * .02; const t = Math.floor(now / 120);
+      c.beginPath(); for (let i = 0; i < 2; i++) { const side = (t + i) % 2 ? 1 : -1, y0 = -s * .1 + ((t * 7 + i * 11) % 5) * s * .06; c.moveTo(side * s * .3, y0); c.lineTo(side * s * .38, y0 + s * .04); c.lineTo(side * s * .33, y0 + s * .08); c.lineTo(side * s * .41, y0 + s * .12); } c.stroke();
+    }
+    if (sk.extra === "sparkle") {
+      for (let i = 0; i < 4; i++) { const a = now / 500 + i * Math.PI / 2, r = s * .42; c.fillStyle = `hsl(${(hue + i * 90) % 360},90%,70%)`; c.save(); c.translate(Math.cos(a) * r, Math.sin(a) * r * .8); c.rotate(a); c.fillRect(-s * .03, -s * .03, s * .06, s * .06); c.restore(); }
+    }
+  }
   function drawPlayer(px, py, now) {
     const s = ts, m = s / 2;
     ctx.save(); ctx.translate(px + m, py + m);
@@ -1180,14 +1784,50 @@ for (let k = 0; k < GEN_LEVELS.length; k++) {
     const bob = playing ? Math.sin(now / 160) * s * .02 : 0;
     ctx.translate(0, bob);
     if (S.boots.h || S.boots.f) { ctx.fillStyle = S.boots.f ? "#ff8a3d" : "#4dd4ff"; ctx.fillRect(-s * .22, s * .24, s * .16, s * .1); ctx.fillRect(s * .06, s * .24, s * .16, s * .1); }
-    ctx.strokeStyle = "#cfd8f0"; ctx.lineWidth = s * .04; ctx.beginPath(); ctx.moveTo(0, -s * .26); ctx.lineTo(0, -s * .38); ctx.stroke();
-    ctx.fillStyle = "#ffd43b"; ctx.shadowColor = "#ffd43b"; ctx.shadowBlur = s * .25; ctx.beginPath(); ctx.arc(0, -s * .4, s * .05, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
-    ctx.fillStyle = "#e8ecf7"; rr(-s * .28, -s * .27, s * .56, s * .52, s * .16); ctx.fill();
-    ctx.fillStyle = "#16213d"; rr(-s * .21, -s * .17, s * .42, s * .22, s * .08); ctx.fill();
-    const [fx, fy] = S.facing; ctx.fillStyle = "#4dd4ff"; ctx.shadowColor = "#4dd4ff"; ctx.shadowBlur = s * .15;
-    for (const ex of [-.09, .09]) { ctx.beginPath(); ctx.arc(s * (ex + fx * .05), s * (-.06 + fy * .03), s * .045, 0, 7); ctx.fill(); }
-    ctx.shadowBlur = 0; ctx.fillStyle = "#ffd43b"; ctx.fillRect(-s * .06, s * .1, s * .12, s * .06);
+    drawRobot(ctx, s, currentSkin(), S.facing, now, false);
     ctx.restore();
+  }
+  function showSkins(back) {
+    playing = false; boardView = null;
+    const card = (sk, k) => {
+      const usable = skinUsable(k), on = currentSkin() === sk;
+      const label = on ? "Equipped" : usable ? (skinUnlocked(k) ? "Tap to equip" : "Tester preview") : sk.weekly !== undefined ? (k === weekSkin(todayUTC()) ? "This week's reward" : "Weekly reward") : `Beat level ${sk.level}`;
+      return `<button class="skin ${on ? "on" : ""}" data-k="${k}" ${usable ? "" : "disabled"}><canvas width="128" height="128" data-sk="${k}"></canvas><b>${esc(sk.name)}</b><small>${label}</small></button>`;
+    };
+    const cards = SKINS.map((sk, k) => sk.weekly === undefined ? card(sk, k) : "").join("")
+      + `</div><div class="tier" style="margin-top:6px">Weekly challenge skins</div><div class="skins">`
+      + SKINS.map((sk, k) => sk.weekly !== undefined ? card(sk, k) : "").join("");
+    const got = SKINS.filter((_, k) => skinUnlocked(k)).length;
+    overlay(`<h2>🎨 Skins</h2><p>${got} of ${SKINS.length} unlocked. Earn skins at levels 50, 100, 150, 200, 300, 400, 500 and 600, and by clearing every daily challenge in a week.</p>
+      <div class="skins">${cards}</div><div class="row"><button class="go" id="skBack">${back === "game" ? "Back to game" : "Done"}</button></div>`, () => {
+      $("ovCard").querySelectorAll(".skin:not([disabled])").forEach(b => b.onclick = () => { setSkin(+b.dataset.k); showSkins(back); });
+      $("skBack").onclick = () => back === "game" ? startLevel(levelIdx) : showMenu();
+      paintSkinPreviews();
+    });
+  }
+  function showUnlock(k, done, why) {
+    const sk = SKINS[k]; beep(880, .15, "triangle"); setTimeout(() => beep(1320, .25, "triangle"), 150);
+    const reason = why || (sk.weekly !== undefined ? "for clearing every daily challenge in a week" : `for beating level ${sk.level}`);
+    overlay(`<h2>🎨 New skin unlocked!</h2><canvas width="128" height="128" data-sk="${k}" style="width:120px;height:120px;border-radius:12px"></canvas><h2 style="color:var(--volt)">${esc(sk.name)}</h2><p>Your reward ${reason}.</p>
+      <div class="row"><button class="go" id="eqBtn">Equip it</button><button class="btn" id="skLater">Maybe later</button></div>`, () => {
+      paintSkinPreviews();
+      $("eqBtn").onclick = () => { setSkin(k); done(); };
+      $("skLater").onclick = done;
+    });
+  }
+  let previewRAF = 0;
+  function paintSkinPreviews() {
+    cancelAnimationFrame(previewRAF);
+    const cvs = [...document.querySelectorAll("canvas[data-sk]")];
+    if (!cvs.length) return;
+    const t = performance.now();
+    for (const cv2 of cvs) {
+      const k = +cv2.dataset.sk, c = cv2.getContext("2d");
+      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.clearRect(0, 0, 128, 128);
+      c.fillStyle = "#1a2238"; c.fillRect(0, 0, 128, 128);
+      c.translate(64, 70); drawRobot(c, 110, SKINS[k], [0, 1], t, !skinUsable(k) && !cv2.dataset.show);
+    }
+    previewRAF = requestAnimationFrame(paintSkinPreviews);
   }
   function drawEnemy(px, py, now) {
     const s = ts, m = s / 2;

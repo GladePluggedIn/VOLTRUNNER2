@@ -1,3 +1,7 @@
+# Builds Volt Runner on GitHub's servers every time you push.
+# Results appear under Actions > (latest run) > Artifacts:
+#   volt-runner-test-apk  -> install directly on your phone
+#   volt-runner-play-aab  -> upload to Google Play (only when signing secrets are set)
 name: Build Android app
 
 on:

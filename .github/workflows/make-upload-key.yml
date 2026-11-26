@@ -1,0 +1,35 @@
+# Run this ONCE (Actions > "Make upload key" > Run workflow).
+# It creates your Play Store upload key and a random password, and saves them
+# as a private download (Artifacts > upload-key). Then add two repository secrets:
+#   KEYSTORE_BASE64   = contents of upload-key-base64.txt
+#   KEYSTORE_PASSWORD = contents of password.txt
+# Keep upload-key.jks and password.txt backed up somewhere safe, then delete the artifact.
+name: Make upload key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Create key
+        run: |
+          mkdir key && cd key
+          PASS=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24)
+          echo -n "$PASS" > password.txt
+          keytool -genkeypair -v -keystore upload-key.jks -alias upload \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=Volt Runner, O=Volt Runner"
+          base64 -w0 upload-key.jks > upload-key-base64.txt
+          keytool -list -v -keystore upload-key.jks -storepass "$PASS" | grep -E "SHA1|SHA256" > fingerprints.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upload-key
+          path: key/
+          retention-days: 7
