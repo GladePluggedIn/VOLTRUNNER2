@@ -1,35 +1,58 @@
-# Run this ONCE (Actions > "Make upload key" > Run workflow).
-# It creates your Play Store upload key and a random password, and saves them
-# as a private download (Artifacts > upload-key). Then add two repository secrets:
-#   KEYSTORE_BASE64   = contents of upload-key-base64.txt
-#   KEYSTORE_PASSWORD = contents of password.txt
-# Keep upload-key.jks and password.txt backed up somewhere safe, then delete the artifact.
-name: Make upload key
+name: Build Android app
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
-  key:
+  build:
     runs-on: ubuntu-latest
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
     steps:
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
-      - name: Create key
+
+      - name: Install packages
+        run: npm ci
+
+      - name: Copy the game into the Android project
+        run: npx cap sync android
+
+      - name: Build test APK
+        working-directory: android
         run: |
-          mkdir key && cd key
-          PASS=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24)
-          echo -n "$PASS" > password.txt
-          keytool -genkeypair -v -keystore upload-key.jks -alias upload \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$PASS" -keypass "$PASS" \
-            -dname "CN=Volt Runner, O=Volt Runner"
-          base64 -w0 upload-key.jks > upload-key-base64.txt
-          keytool -list -v -keystore upload-key.jks -storepass "$PASS" | grep -E "SHA1|SHA256" > fingerprints.txt
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
       - uses: actions/upload-artifact@v4
         with:
-          name: upload-key
-          path: key/
-          retention-days: 7
+          name: volt-runner-test-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Build and sign Play Store bundle
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        working-directory: android
+        run: |
+          ./gradlew bundleRelease --no-daemon
+          echo "$KEYSTORE_BASE64" | base64 -d > upload.jks
+          jarsigner -keystore upload.jks -storepass "$KEYSTORE_PASSWORD" \
+            -sigalg SHA256withRSA -digestalg SHA-256 \
+            app/build/outputs/bundle/release/app-release.aab upload
+          rm upload.jks
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('android/app/build/outputs/bundle/release/app-release.aab') != '' }}
+        with:
+          name: volt-runner-play-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
