@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1220">
+<title>Volt Runner</title>
+<script src="leaderboards.js"></script>
+<style>
+  @font-face { font-family:"Press Start 2P"; src:url(fonts/press-start-2p-latin-400-normal.woff2) format("woff2"); font-weight:400; }
+  @font-face { font-family:Inter; src:url(fonts/inter-latin-500-normal.woff2) format("woff2"); font-weight:500; }
+  @font-face { font-family:Inter; src:url(fonts/inter-latin-700-normal.woff2) format("woff2"); font-weight:700; }
+  :root { --bg:#0d1220; --panel:#161d31; --line:#26304d; --ink:#e8ecf7; --dim:#8a94b3; --volt:#ffd43b; --accent:#4dd4ff; --good:#3ddc84; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:Inter,system-ui,sans-serif; overflow:hidden; overscroll-behavior:none; user-select:none; -webkit-user-select:none; }
+  #app { height:100dvh; display:flex; flex-direction:column; max-width:620px; margin:0 auto; gap:8px;
+    padding: max(10px, env(safe-area-inset-top), var(--safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right), var(--safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left), var(--safe-area-inset-left, 0px)); }
+  .hud { display:flex; align-items:center; gap:6px; }
+  .title { font-family:"Press Start 2P",monospace; font-size:10px; line-height:1.4; color:var(--volt); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .btn { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font:700 13px Inter,sans-serif; cursor:pointer; white-space:nowrap; }
+  .btn:active { transform:translateY(1px); background:#1e2742; }
+  .stats { display:grid; grid-template-columns:1fr 1fr 1.3fr; gap:6px; }
+  .stat { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:6px 10px; display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .stat small { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.08em; }
+  .stat b { font-family:"Press Start 2P",monospace; font-size:12px; }
+  .stat b.low { color:#ff6b6b; }
+  #inv { display:flex; gap:4px; align-items:center; min-height:16px; flex-wrap:nowrap; overflow:hidden; }
+  #inv span { width:16px; height:16px; border-radius:4px; display:inline-grid; place-items:center; font:700 10px Inter; color:#0d1220; }
+  #stage { flex:1; min-height:0; position:relative; display:grid; place-items:center; touch-action:none; }
+  canvas#cv { border-radius:12px; box-shadow:0 0 0 1px var(--line), 0 12px 40px rgba(0,0,0,.45); touch-action:none; }
+  .pad { display:grid; grid-template-columns:repeat(3,64px); grid-template-rows:repeat(2,52px); gap:8px; justify-content:center; }
+  .pad button { background:var(--panel); border:1px solid var(--line); border-radius:14px; color:var(--ink); font-size:22px; touch-action:none; cursor:pointer; }
+  .pad button.on { background:#24305a; border-color:var(--accent); }
+  .pad .u { grid-column:2; grid-row:1; } .pad .l { grid-column:1; grid-row:2; } .pad .d { grid-column:2; grid-row:2; } .pad .r { grid-column:3; grid-row:2; }
+  .pad .m { grid-column:3; grid-row:1; font:700 12px Inter; color:var(--accent); }
+  .pad .lb { grid-column:1; grid-row:1; font-size:18px; }
+  .overlay { position:absolute; inset:0; display:none; place-items:center; background:rgba(8,11,20,.94); border-radius:12px; z-index:5; padding:14px; }
+  .overlay.show { display:grid; }
+  .card { text-align:center; width:100%; max-width:400px; max-height:100%; overflow-y:auto; display:flex; flex-direction:column; gap:12px; align-items:center; padding:4px; overscroll-behavior:contain; touch-action:pan-y; }
+  .card h1 { font-family:"Press Start 2P",monospace; font-size:20px; line-height:1.4; margin:0; color:var(--volt); text-shadow:0 0 18px rgba(255,212,59,.45); }
+  .card h2 { font-family:"Press Start 2P",monospace; font-size:13px; line-height:1.6; margin:0; }
+  .card p { margin:0; color:var(--dim); line-height:1.5; font-size:14px; }
+  .card .go { background:var(--volt); color:#1a1400; border:none; border-radius:12px; padding:12px 22px; font:700 15px Inter; cursor:pointer; }
+  .card .row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .levels { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; width:100%; }
+  .levels button { aspect-ratio:1; border-radius:9px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font:700 14px Inter; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px; }
+  .levels button small { font-size:9px; color:var(--dim); font-weight:500; }
+  .levels button.done { border-color:var(--good); }
+  .levels button.done small { color:var(--good); }
+  .levels button:disabled { opacity:.3; cursor:default; }
+  .tier { width:100%; text-align:left; font:700 11px Inter; color:var(--dim); text-transform:uppercase; letter-spacing:.08em; margin-top:4px; }
+  .toast { position:absolute; left:50%; top:10px; transform:translateX(-50%); background:rgba(22,29,49,.95); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:13px; color:var(--ink); max-width:92%; text-align:center; pointer-events:none; opacity:0; transition:opacity .3s; z-index:4; }
+  .toast.show { opacity:1; }
+  .board { width:100%; border-collapse:collapse; font-size:14px; }
+  .board td { padding:7px 6px; border-bottom:1px solid var(--line); text-align:left; }
+  .board td:first-child { width:34px; color:var(--dim); font-weight:700; }
+  .board td:last-child { text-align:right; font-family:"Press Start 2P",monospace; font-size:11px; }
+  .board tr.me td { color:var(--volt); }
+  .tabs { display:flex; gap:6px; }
+  .tabs button.on { border-color:var(--volt); color:var(--volt); }
+  .lvlnav { display:flex; align-items:center; gap:10px; }
+  .lvlnav b { font-family:"Press Start 2P",monospace; font-size:11px; min-width:130px; }
+  input.nick { background:var(--panel); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:9px 10px; font:500 14px Inter; width:170px; user-select:text; -webkit-user-select:text; }
+  #mapCv { image-rendering:pixelated; border-radius:8px; max-width:100%; }
+  @media (min-width:700px) and (hover:hover) { .pad .u, .pad .d, .pad .l, .pad .r { display:none; } .pad { grid-template-rows:52px; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hud">
+    <div class="title" id="lvlName">VOLT RUNNER</div>
+    <button class="btn" id="soundBtn" aria-label="Toggle sound">🔊</button>
+    <button class="btn" id="restartBtn">↻</button>
+    <button class="btn" id="menuBtn">Levels</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><small>Cells left</small><b id="cellsOut">0</b></div>
+    <div class="stat"><small>Time</small><b id="timeOut">0</b></div>
+    <div class="stat"><small>Items</small><div id="inv"></div></div>
+  </div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div class="toast" id="toast"></div>
+    <div class="overlay" id="ov"><div class="card" id="ovCard"></div></div>
+  </div>
+  <div class="pad" id="pad">
+    <button class="lb" id="lbBtn" aria-label="Leaderboard">🏆</button>
+    <button class="u" data-d="0,-1" aria-label="Up">▲</button>
+    <button class="m" id="mapBtn">MAP</button>
+    <button class="l" data-d="-1,0" aria-label="Left">◀</button>
+    <button class="d" data-d="0,1" aria-label="Down">▼</button>
+    <button class="r" data-d="1,0" aria-label="Right">▶</button>
+  </div>
+</div>
+<script>
+// ===== Volt Runner core rules (shared by game + solver) =====
+const LEVELS = [
+  { name: "Power Up", time: 90,
+    hint: "Grab every power cell, then the socket opens to the exit portal.",
+    map: [
+      "###########",
+      "#@...#...c#",
+      "#.##.#.##.#",
+      "#.#c.....##",
+      "#.####.#..#",
+      "#c...#.#.c#",
+      "######S####",
+      "  #...E.#  ",
+      "  #######  "] },
+  { name: "Lock & Key", time: 120,
+    hint: "Keys open doors of the same color. Each key works once.",
+    map: [
+      "#############",
+      "#@..#...#..y#",
+      "#...R...B...#",
+      "#.cr#..b#c..#",
+      "#########Y###",
+      "#c..........#",
+      "#..######S###",
+      "#.c#    #.E.#",
+      "####    #####"] },
+  { name: "Elements", time: 120,
+    hint: "Water and lava are deadly. Swim fins and fire boots get you across, but only once: they're used up when you step back onto dry ground.",
+    map: [
+      "###########",
+      "#@..w..llc#",
+      "#.h.w.f.l.#",
+      "#...w...l.#",
+      "#.###.###.#",
+      "#c###c###.#",
+      "#########S#",
+      "        #E#"] },
+  { name: "Heavy Lifting", time: 150,
+    hint: "Push crates into water to build a bridge. Stuck? Hit restart.",
+    map: [
+      "#############",
+      "#@.....#ww.c#",
+      "#..x...xww..#",
+      "#c.....#ww..#",
+      "##########S##",
+      "         #E# "] },
+  { name: "Slippery", time: 120,
+    hint: "Ice keeps you sliding until you hit something solid.",
+    map: [
+      "###########",
+      "#@..iiii.c#",
+      "#.#.iiii.##",
+      "#c..iiii..#",
+      "#.##iiii#.#",
+      "#...iiiic.#",
+      "#########S#",
+      "        #E#"] },
+  { name: "Patrol", time: 120,
+    hint: "Drones patrol back and forth. Touch one and you're toast. Time your moves!",
+    map: [
+      "#############",
+      "#@.........c#",
+      "#e..........#",
+      "#.c.........#",
+      "#..........e#",
+      "#c....c....c#",
+      "######S######",
+      "     #E#     "] },
+  { name: "Gauntlet", time: 180,
+    hint: "Everything at once. Keys, crates, drones and water.",
+    map: [
+      "###############",
+      "#@.r#..h..#.w.#",
+      "#...R..x..B.wc#",
+      "#.c.#.....#.w.#",
+      "#####.e...#.w.#",
+      "#c..w...b.#.wc#",
+      "#############S#",
+      "            #E#"] },
+  { name: "Meltdown", time: 180,
+    hint: "Find the boots, find the key, and watch your step on the ice.",
+    map: [
+      "#############",
+      "#@..l.y#c...#",
+      "#.f.l..Y.iii#",
+      "#...l..#.iii#",
+      "######.###.c#",
+      "#c..wx...#..#",
+      "##########S##",
+      "         #E# "] },
+  { name: "Crossfire", time: 200,
+    hint: "Two drones guard the halls. Patience pays.",
+    map: [
+      "###############",
+      "#@...#c...v...#",
+      "#.x..#.###.##.#",
+      "#....B.#c....r#",
+      "#w####.#.####.#",
+      "#.b..#e......c#",
+      "#c...#####R####",
+      "#....#  #.S.#  ",
+      "######  #.E.#  ",
+      "        #####  "] },
+];
+
+const KEYS = { r: "R", b: "B", y: "Y" };
+const PORTAL_CH = "1234";
+const isHazard = t => t === "w" || t === "l";
+// Bumpers deflect a slide 90 degrees: "/" and "\"
+function deflect(t, dx, dy) { return t === "/" ? [-dy, -dx] : [dy, dx]; }
+
+function loadLevel(i) { return loadLevelFrom(LEVELS[i]); }
+function loadLevelFrom(L) {
+  const h = L.map.length;
+  const w = Math.max(...L.map.map(r => r.length));
+  const grid = [];
+  const enemies = [];
+  const ports = {};
+  let px = 0, py = 0, cells = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let ch = L.map[y][x] || " ";
+      if (ch === "@") { px = x; py = y; ch = "."; }
+      else if (ch === "e") { enemies.push({ x, y, dx: 1, dy: 0 }); ch = "."; }
+      else if (ch === "v") { enemies.push({ x, y, dx: 0, dy: 1 }); ch = "."; }
+      if (ch === "c" || ch === "C") cells++;
+      if (PORTAL_CH.includes(ch)) (ports[ch] = ports[ch] || []).push(y * w + x);
+      grid.push(ch);
+    }
+  }
+  const portal = {};
+  for (const k in ports) if (ports[k].length === 2) { portal[ports[k][0]] = ports[k][1]; portal[ports[k][1]] = ports[k][0]; }
+  return { w, h, grid, px, py, keys: { r: 0, b: 0, y: 0 }, boots: { h: false, f: false }, wet: { h: false, f: false },
+    cells, sliding: null, facing: [0, 1], dead: null, won: false, enemies, portal, used: null };
+}
+
+function cloneState(s) {
+  return { ...s, grid: s.grid.slice(), keys: { ...s.keys }, boots: { ...s.boots }, wet: { ...s.wet },
+    enemies: s.enemies.map(e => ({ ...e })) };
+}
+
+function tileAt(s, x, y) {
+  if (x < 0 || y < 0 || x >= s.w || y >= s.h) return "#";
+  return s.grid[y * s.w + x];
+}
+function setTile(s, x, y, c) { s.grid[y * s.w + x] = c; }
+
+// Mutates s. Returns true if the player moved.
+function tryMove(s, dx, dy) {
+  s.facing = [dx, dy];
+  s.used = null;
+  const nx = s.px + dx, ny = s.py + dy;
+  const t = tileAt(s, nx, ny);
+  if (t === "#" || t === " ") return false;
+  if (t === "R" || t === "B" || t === "Y") {
+    const k = t.toLowerCase();
+    if (s.keys[k] <= 0) return false;
+    s.keys[k]--; setTile(s, nx, ny, ".");
+  } else if (t === "S") {
+    if (s.cells > 0) return false;
+    setTile(s, nx, ny, ".");
+  } else if (t === "x") {
+    const bx = nx + dx, by = ny + dy, bt = tileAt(s, bx, by);
+    if (s.enemies.some(e => e.x === bx && e.y === by)) return false;
+    if (bt === "." || bt === ",") setTile(s, bx, by, "x");
+    else if (bt === "w") setTile(s, bx, by, ",");
+    else return false;
+    setTile(s, nx, ny, ".");
+  }
+  s.px = nx; s.py = ny;
+  const u = tileAt(s, nx, ny);
+  s.sliding = null;
+  if (u === "w") { if (!s.boots.h) s.dead = "You sank! You need swim fins to cross water."; else s.wet.h = true; }
+  else if (u === "l") { if (!s.boots.f) s.dead = "Melted! You need fire boots to cross lava."; else s.wet.f = true; }
+  else {
+    // Back on solid ground: power-ups that were used are gone
+    if (s.wet.h) { s.boots.h = false; s.wet.h = false; s.used = "h"; }
+    if (s.wet.f) { s.boots.f = false; s.wet.f = false; s.used = s.used ? "hf" : "f"; }
+    if (u === "c") { s.cells--; setTile(s, nx, ny, "."); }
+    else if (u === "C") { s.cells--; setTile(s, nx, ny, "i"); s.sliding = [dx, dy]; }
+    else if (u in KEYS) { s.keys[u]++; setTile(s, nx, ny, "."); }
+    else if ((u === "h" || u === "f") && !s.boots[u]) { s.boots[u] = true; setTile(s, nx, ny, "."); }
+    else if (u === "E") { s.won = true; }
+    else if (u === "i") { s.sliding = [dx, dy]; }
+    else if (u === "/" || u === "\\") { s.sliding = deflect(u, dx, dy); s.facing = s.sliding; }
+    else if (PORTAL_CH.includes(u)) {
+      const to = s.portal[ny * s.w + nx];
+      if (to !== undefined) { s.px = to % s.w; s.py = Math.floor(to / s.w); s.teleported = true; }
+    }
+  }
+  if (s.enemies.some(e => e.x === s.px && e.y === s.py)) s.dead = "Zapped by a drone!";
+  return true;
+}
+
+// One slide step on ice. Returns true if still sliding.
+function slideStep(s) {
+  if (!s.sliding) return false;
+  const [dx, dy] = s.sliding;
+  if (!tryMove(s, dx, dy)) { s.sliding = null; return false; }
+  return !!s.sliding;
+}
+
+function enemyPassable(s, x, y) {
+  const t = tileAt(s, x, y);
+  return (t === "." || t === ",") && !s.enemies.some(e => e.x === x && e.y === y);
+}
+
+function moveEnemies(s) {
+  for (const e of s.enemies) {
+    let nx = e.x + e.dx, ny = e.y + e.dy;
+    if (!enemyPassable(s, nx, ny)) {
+      e.dx = -e.dx; e.dy = -e.dy;
+      nx = e.x + e.dx; ny = e.y + e.dy;
+      if (!enemyPassable(s, nx, ny)) continue;
+    }
+    e.x = nx; e.y = ny;
+    if (e.x === s.px && e.y === s.py) s.dead = "Zapped by a drone!";
+  }
+}
+
+if (typeof module !== "undefined") module.exports = { LEVELS, loadLevel, loadLevelFrom, moveEnemies, cloneState, tryMove, slideStep, tileAt, deflect, PORTAL_CH };
+
+// ===== Volt Runner procedural level generator (deterministic, seeded) =====
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const GEN_INTRO = {
+  10: "From here on, maps are bigger than your screen. Tap MAP to peek at the whole level.",
+  12: "Water barriers block the halls. Swim fins get you across once, so grab a fresh pair for the trip back.",
+  14: "Drones now roam the rooms and halls. Keep your distance.",
+  15: "Lava walls appear. Fire boots also last for one crossing only.",
+  18: "Crate bridges: push the crate into the water from the near side. Push it wrong and you'll need to retry.",
+  22: "Ice rooms! Cells out on the ice are grabbed as you slide over them.",
+  26: "Flooded rooms: stick to the safe path and save your power-ups for the hallways.",
+  30: "Rooms now have pillars. Watch for twisty routes.",
+  50: "Halfway! Bigger maps, longer key chains, tighter clocks.",
+  75: "The deep grid. Plan your route before you run.",
+  100: "Level 100. Survive this and the Deep Grid awaits.",
+  101: "Bumpers! The angled blocks on ice bounce you sideways mid-slide.",
+  125: "Every crossing costs a power-up. Don't waste them on detours.",
+  150: "Portals! Step on a colored portal to warp to its twin. Some rooms can only be reached this way.",
+  175: "Portal mazes. Map out where each pair leads before you commit.",
+  200: "Level 200, the final overload. Good luck, runner.",
+};
+const GEN_TIPS = [
+  "Keys are often hidden deep in dead ends. Explore before you commit.",
+  "The clock is tight. Plan the route on the MAP first.",
+  "Every key works once, so open the doors that matter.",
+  "Drones bounce back and forth. Wait for the gap.",
+  "Power-ups are one crossing each. Spares wait for you on the other side.",
+  "You can only carry one pair of fins and one pair of boots at a time.",
+  "Bumpers on ice redirect you. Think two bounces ahead.",
+];
+const ADJ = ["Copper","Neon","Static","Rusty","Humming","Silent","Flux","Ion","Quartz","Cobalt","Magnetic","Phantom","Overclocked","Shorted","Molten","Frozen","Echo","Pulse","Hollow","Tangled","Grounded","Live","High-Voltage","Signal","Binary"];
+const NOUN = ["Grid","Relay","Conduit","Vault","Junction","Circuit","Labyrinth","Reactor","Core","Array","Switchyard","Coil","Bus","Matrix","Furnace","Cistern","Foundry","Annex","Spire","Substation","Catacomb","Breaker","Capacitor","Network","Spiral"];
+
+function genParams(L) {
+  let P;
+  if (L <= 100) {
+    const t = (L - 10) / 90;
+    P = { t, rooms: Math.round(5 + t * 20), n: t < 0.3 ? 5 : t < 0.65 ? 6 : 7, gateP: 0.35 + 0.5 * t,
+      cells: 4 + Math.round(t * 18), drones: L >= 14 ? 1 + Math.floor(t * 10) : 0,
+      special: Math.min(0.75, 0.25 + t * 0.6), timeF: 1.1 - 0.55 * t };
+  } else {
+    const u = (L - 100) / 100;
+    P = { t: 1 + u, rooms: Math.round(25 + u * 11), n: 7, gateP: 0.85 + 0.1 * u,
+      cells: 22 + Math.round(u * 12), drones: 11 + Math.floor(u * 8),
+      special: 0.8, timeF: 0.55 - 0.12 * u };
+  }
+  P.Rc = Math.ceil(Math.sqrt(P.rooms)); P.Rr = Math.ceil(P.rooms / P.Rc);
+  P.water = L >= 12; P.lava = L >= 15; P.crate = L >= 18; P.ice = L >= 22; P.hazard = L >= 26; P.maze = L >= 30;
+  P.bumpers = L >= 101;
+  P.portalEdgeP = L >= 150 ? 0.12 + 0.13 * (L - 150) / 50 : 0;
+  P.shortcuts = L >= 150 ? 1 + Math.floor((L - 150) / 25) : 0;
+  return P;
+}
+
+function generateLevel(L, seed) {
+  const rng = mulberry32(seed * 7919 + L);
+  const ri = n => Math.floor(rng() * n);
+  const pick = a => a[ri(a.length)];
+  const P = genParams(L);
+  const { Rr, Rc, n } = P, st = n + 3;
+  const W = Rc * st - 1, H = Rr * st - 1;
+  const g = Array.from({ length: H }, () => Array(W).fill("#"));
+  const rid = (i, j) => i * Rc + j;
+  const N = Rr * Rc;
+  const ox = j => 1 + j * st, oy = i => 1 + i * st;
+  const rX = r => ox(r % Rc), rY = r => oy(Math.floor(r / Rc));
+
+  // ---- spanning tree (randomized DFS with occasional branching) ----
+  const corners = [0, Rc - 1, (Rr - 1) * Rc, N - 1];
+  const start = pick(corners);
+  const depth = Array(N).fill(0), seen = Array(N).fill(false);
+  const edges = [];
+  const stack = [start]; seen[start] = true;
+  while (stack.length) {
+    const idx = rng() < 0.2 ? ri(stack.length) : stack.length - 1;
+    const r = stack[idx], i = Math.floor(r / Rc), j = r % Rc;
+    const nb = [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]].filter(([a, b]) => a >= 0 && b >= 0 && a < Rr && b < Rc && !seen[rid(a, b)]);
+    if (!nb.length) { stack.splice(idx, 1); continue; }
+    const [a, b] = pick(nb), v = rid(a, b);
+    seen[v] = true; depth[v] = depth[r] + 1; stack.push(v); edges.push([r, v]);
+  }
+  const children = Array.from({ length: N }, () => []);
+  for (const [u, v] of edges) children[u].push(v);
+  const bfs = [start];
+  for (let k = 0; k < bfs.length; k++) bfs.push(...children[bfs[k]]);
+  const parentOf = Array(N).fill(-1);
+  for (const [u, v] of edges) parentOf[v] = u;
+  let exit = start;
+  for (let r = 0; r < N; r++) if (depth[r] > depth[exit]) exit = r;
+
+  // ---- room types ----
+  const type = Array(N).fill("plain");
+  for (let r = 0; r < N; r++) {
+    if (r === start || r === exit) continue;
+    if (rng() < P.special) {
+      const opts = [];
+      if (P.ice) opts.push("ice", ...(P.bumpers ? ["ice"] : []));
+      if (P.hazard) opts.push("water", "lava");
+      if (P.maze) opts.push("maze", "maze");
+      if (opts.length) type[r] = pick(opts);
+    }
+  }
+
+  // ---- connections: corridors or portal links ----
+  const reserved = Array.from({ length: N }, () => []);
+  const corr = {}, portalEdge = {};
+  let nextPortal = 0;
+  const randomSpot = r => {
+    const X = rX(r), Y = rY(r);
+    if (type[r] === "ice") { // border ring only
+      const side = ri(4), k = ri(n);
+      return side === 0 ? [X + k, Y] : side === 1 ? [X + k, Y + n - 1] : side === 2 ? [X, Y + k] : [X + n - 1, Y + k];
+    }
+    return [X + ri(n), Y + ri(n)];
+  };
+  const isRes = (r, x, y) => reserved[r].some(([a, b]) => a === x && b === y);
+  for (const [u, v] of edges) {
+    if (v !== exit && P.portalEdgeP && nextPortal < 3 && rng() < P.portalEdgeP) {
+      const pu = randomSpot(u), pv = randomSpot(v);
+      if (isRes(u, ...pu) || isRes(v, ...pv)) { /* fall through to a corridor */ }
+      else { reserved[u].push(pu); reserved[v].push(pv); portalEdge[v] = { ch: "1234"[nextPortal++], pu, pv }; continue; }
+    }
+    const ui = Math.floor(u / Rc), uj = u % Rc, vi = Math.floor(v / Rc), vj = v % Rc;
+    const k = ri(n);
+    let tiles;
+    if (ui === vi) {
+      const y = oy(ui) + k, left = Math.min(uj, vj), x0 = ox(left) + n;
+      tiles = [[x0, y], [x0 + 1, y], [x0 + 2, y]];
+      if (uj > vj) tiles.reverse();
+      reserved[u].push(uj < vj ? [x0 - 1, y] : [x0 + 3, y]);
+      reserved[v].push(uj < vj ? [x0 + 3, y] : [x0 - 1, y]);
+    } else {
+      const x = ox(uj) + k, top = Math.min(ui, vi), y0 = oy(top) + n;
+      tiles = [[x, y0], [x, y0 + 1], [x, y0 + 2]];
+      if (ui > vi) tiles.reverse();
+      reserved[u].push(ui < vi ? [x, y0 - 1] : [x, y0 + 3]);
+      reserved[v].push(ui < vi ? [x, y0 + 3] : [x, y0 - 1]);
+    }
+    corr[v] = tiles;
+  }
+
+  // ---- carve rooms ----
+  const cand = Array.from({ length: N }, () => []);   // floor tiles for items
+  const iceCand = Array.from({ length: N }, () => []); // ice tiles cells can sit on
+
+  // Checks an ice room: every slide ends somewhere you can get back from, no endless bumper loops.
+  function iceAnalysis(X, Y) {
+    const inR = (x, y) => x >= X && y >= Y && x < X + n && y < Y + n;
+    const key = (x, y) => y * W + x;
+    const stops = new Map(), trav = new Set(), q = [];
+    for (let y = Y; y < Y + n; y++) for (let x = X; x < X + n; x++)
+      if (g[y][x] === ".") { stops.set(key(x, y), []); q.push([x, y]); }
+    const border = new Set(stops.keys());
+    while (q.length) {
+      const [sx, sy] = q.pop(), outs = stops.get(key(sx, sy));
+      for (let [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+        let x = sx, y = sy, moved = false, steps = 0;
+        for (;;) {
+          const nx = x + dx, ny = y + dy;
+          if (!inR(nx, ny) || g[ny][nx] === "#") break;
+          x = nx; y = ny; moved = true;
+          const t = g[y][x];
+          if (t === ".") break;
+          if (t === "i") trav.add(key(x, y));
+          else if (t === "/" || t === "\\") [dx, dy] = deflect(t, dx, dy);
+          if (++steps > 4 * n * n) return null; // bumper loop
+        }
+        if (!moved) continue;
+        const k = key(x, y); outs.push(k);
+        if (!stops.has(k)) { stops.set(k, []); q.push([x, y]); }
+      }
+    }
+    // every stop must be able to get back to the floor ring
+    const back = new Set(border);
+    let grew = true;
+    while (grew) { grew = false; for (const [k, outs] of stops) if (!back.has(k) && outs.some(o => back.has(o))) { back.add(k); grew = true; } }
+    for (const k of stops.keys()) if (!back.has(k)) return null;
+    return [...trav].map(k => [k % W, Math.floor(k / W)]);
+  }
+
+  function carveRoom(r) {
+    const X = rX(r), Y = rY(r), T = type[r];
+    const fill = c => { for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) g[Y + y][X + x] = c; };
+    fill(".");
+    if (T === "ice") {
+      let trav = null;
+      for (let attempt = 0; attempt < 14 && !trav; attempt++) {
+        fill(".");
+        for (let y = 1; y < n - 1; y++) for (let x = 1; x < n - 1; x++) g[Y + y][X + x] = "i";
+        const pil = n >= 6 ? 1 + ri(2) : ri(2);
+        for (let p = 0; p < pil; p++) g[Y + 1 + ri(n - 2)][X + 1 + ri(n - 2)] = "#";
+        if (P.bumpers && attempt < 12) {
+          const nb = n >= 7 ? 2 + ri(3) : 1 + ri(2);
+          for (let b = 0; b < nb; b++) { const x = X + 1 + ri(n - 2), y = Y + 1 + ri(n - 2); if (g[y][x] === "i") g[y][x] = rng() < 0.5 ? "/" : "\\"; }
+        }
+        trav = iceAnalysis(X, Y);
+      }
+      if (!trav) return false;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++)
+        if (g[Y + y][X + x] === "." && !isRes(r, X + x, Y + y)) cand[r].push([X + x, Y + y]);
+      iceCand[r] = trav;
+      return true;
+    }
+    if (T === "water" || T === "lava") {
+      fill(T === "water" ? "w" : "l");
+      const hub = [X + 1 + ri(n - 2), Y + 1 + ri(n - 2)];
+      const carve = ([ax, ay], [bx, by]) => {
+        let x = ax, y = ay; g[y][x] = ".";
+        while (x !== bx || y !== by) {
+          if (x !== bx && (y === by || rng() < 0.5)) x += Math.sign(bx - x); else y += Math.sign(by - y);
+          g[y][x] = ".";
+        }
+      };
+      for (const p of reserved[r]) carve(p, hub);
+      if (!reserved[r].length) carve(hub, hub);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++)
+        if (g[Y + y][X + x] === "." && !isRes(r, X + x, Y + y)) cand[r].push([X + x, Y + y]);
+      return true;
+    }
+    for (let attempt = 0; attempt < 20; attempt++) {
+      fill(".");
+      if (T === "maze") {
+        for (let y = 0; y < n; y++) for (let x = 0; x < n; x++)
+          if (!isRes(r, X + x, Y + y) && rng() < 0.3) g[Y + y][X + x] = "#";
+      }
+      let s0 = reserved[r][0];
+      if (!s0) { for (let y = 0; y < n && !s0; y++) for (let x = 0; x < n && !s0; x++) if (g[Y + y][X + x] === ".") s0 = [X + x, Y + y]; }
+      if (!s0) continue;
+      const vis = new Set([s0[0] + "," + s0[1]]), q = [s0];
+      while (q.length) {
+        const [x, y] = q.pop();
+        for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+          const a = x + dx, b = y + dy;
+          if (a < X || b < Y || a >= X + n || b >= Y + n || g[b][a] === "#" || vis.has(a + "," + b)) continue;
+          vis.add(a + "," + b); q.push([a, b]);
+        }
+      }
+      if (!reserved[r].every(([a, b]) => vis.has(a + "," + b))) continue;
+      for (const k of vis) { const [a, b] = k.split(",").map(Number); if (!isRes(r, a, b)) cand[r].push([a, b]); }
+      return true;
+    }
+    return false;
+  }
+  for (let r = 0; r < N; r++) if (!carveRoom(r)) return null;
+
+  // floor tile (or, for cells, an ice tile) from a room
+  const takeTile = (r, cellOK) => {
+    const pool = cand[r].concat(cellOK ? iceCand[r].map(p => [...p, 1]) : []);
+    for (let tries = 0; tries < 30 && pool.length; tries++) {
+      const k = ri(pool.length), [x, y, ice] = pool[k];
+      pool.splice(k, 1);
+      const t = g[y][x];
+      if (!ice && t === ".") { cand[r] = cand[r].filter(p => p[0] !== x || p[1] !== y); return [x, y, "."]; }
+      if (ice && t === "i") { iceCand[r] = iceCand[r].filter(p => p[0] !== x || p[1] !== y); return [x, y, "i"]; }
+    }
+    return null;
+  };
+  const putIn = (r, ch) => {
+    const p = takeTile(r, ch === "c");
+    if (!p) return false;
+    g[p[1]][p[0]] = p[2] === "i" ? "C" : ch;
+    return true;
+  };
+  const place = (rooms, ch) => {
+    for (let tries = 0; tries < 40; tries++) {
+      let tot = 0; for (const r of rooms) tot += depth[r] + 1;
+      let k = rng() * tot, r = rooms[0];
+      for (const q of rooms) { k -= depth[q] + 1; if (k <= 0) { r = q; break; } }
+      if (putIn(r, ch)) return true;
+    }
+    return false;
+  };
+
+  const sp = takeTile(start, false); if (!sp) return null; g[sp[1]][sp[0]] = "@";
+  const ep = takeTile(exit, false); if (!ep) return null; g[ep[1]][ep[0]] = "E";
+
+  // ---- gates (processed outward from the start) ----
+  let gates = 0;
+  const reach = [];
+  for (const v of bfs) {
+    if (v !== start) {
+      const u = parentOf[v];
+      if (portalEdge[v]) {
+        const { ch, pu, pv } = portalEdge[v];
+        g[pu[1]][pu[0]] = ch; g[pv[1]][pv[0]] = ch; gates++;
+      } else {
+        const tiles = corr[v];
+        for (const [x, y] of tiles) g[y][x] = ".";
+        if (v === exit) { g[tiles[1][1]][tiles[1][0]] = "S"; }
+        else if (rng() < P.gateP) {
+          const opts = ["door", "door", "door"];
+          if (P.water) opts.push("water");
+          if (P.lava) opts.push("lava");
+          if (P.crate) opts.push("crate", "crate");
+          const k = pick(opts);
+          if (k === "door") {
+            const c = pick(["r", "b", "y"]);
+            if (!place(reach, c)) return null;
+            g[tiles[1][1]][tiles[1][0]] = c.toUpperCase();
+          } else if (k === "water" || k === "lava") {
+            const item = k === "water" ? "h" : "f";
+            // one pair to get across, one waiting on the far side for the trip back
+            if (!putIn(u, item) || !putIn(v, item)) return null;
+            for (const [x, y] of tiles) g[y][x] = k === "water" ? "w" : "l";
+          } else {
+            g[tiles[0][1]][tiles[0][0]] = "x";
+            g[tiles[1][1]][tiles[1][0]] = "w";
+          }
+          gates++;
+        }
+      }
+    }
+    if (v !== exit) reach.push(v);
+  }
+  // shortcut portals between far-apart rooms
+  for (let s = 0; s < P.shortcuts && nextPortal < 4; s++) {
+    const a = pick(reach), b = pick(reach);
+    if (a === b) continue;
+    const pa = takeTile(a, false), pb = takeTile(b, false);
+    if (!pa || !pb) continue;
+    const ch = "1234"[nextPortal++];
+    g[pa[1]][pa[0]] = ch; g[pb[1]][pb[0]] = ch;
+  }
+  for (let c = 0; c < P.cells; c++) if (!place(reach, "c")) return null;
+  const droneRooms = reach.filter(r => r !== start && (type[r] === "plain" || type[r] === "maze"));
+  for (let d = 0; d < P.drones && droneRooms.length; d++) {
+    const r = pick(droneRooms), p = takeTile(r, false);
+    if (p) g[p[1]][p[0]] = rng() < 0.5 ? "e" : "v";
+  }
+  const name = ADJ[L % 25] + " " + NOUN[(L * 3 + Math.floor(L / 25)) % 25];
+  const hint = GEN_INTRO[L] || GEN_TIPS[L % GEN_TIPS.length];
+  return { name, hint, map: g.map(r => r.join("")), gates };
+}
+
+// Greedy verifier: walks to the nearest pickup; if none, through the nearest gate or hazard crossing.
+// Every move is replayed with the real game rules, so a level it finishes is truly beatable.
+function verifyLevel(lv) {
+  const s = loadLevelFrom(lv); s.enemies = [];
+  const DIRS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+  const T = (x, y) => tileAt(s, x, y);
+  function sim(x, y, wh, wf, dx, dy, allow) {
+    let first = true;
+    for (;;) {
+      const nx = x + dx, ny = y + dy, t = T(nx, ny);
+      const stop = first ? null : { x, y, wh: false, wf: false, ev: 0 };
+      if (t === "#" || t === " ") return stop;
+      if (t === "R" || t === "B" || t === "Y") return allow && s.keys[t.toLowerCase()] > 0 ? { x: nx, y: ny, ev: 2 } : stop;
+      if (t === "S") return allow && s.cells === 0 ? { x: nx, y: ny, ev: 2 } : stop;
+      if (t === "x") { const bt = T(nx + dx, ny + dy); return allow && (bt === "." || bt === "," || bt === "w") ? { x: nx, y: ny, ev: 2 } : stop; }
+      if (t === "w") return allow && s.boots.h ? { x: nx, y: ny, wh: true, wf, ev: 0 } : null;
+      if (t === "l") return allow && s.boots.f ? { x: nx, y: ny, wh, wf: true, ev: 0 } : null;
+      if (wh || wf) return { x: nx, y: ny, ev: 3 };
+      if ("crybEC".includes(t) || (t === "h" && !s.boots.h) || (t === "f" && !s.boots.f)) return { x: nx, y: ny, ev: 1 };
+      if (PORTAL_CH.includes(t)) { const to = s.portal[ny * s.w + nx]; if (to !== undefined) return { x: to % s.w, y: Math.floor(to / s.w), ev: 0 }; return { x: nx, y: ny, ev: 0 }; }
+      if (t === "i") { x = nx; y = ny; first = false; continue; }
+      if (t === "/" || t === "\\") { [dx, dy] = deflect(t, dx, dy); x = nx; y = ny; first = false; continue; }
+      return { x: nx, y: ny, ev: 0 };
+    }
+  }
+  const everSeen = new Set();
+  function search(allow, reach1, mode) {
+    const key = (x, y, wh, wf) => ((y * s.w + x) << 2) | (wh ? 2 : 0) | (wf ? 1 : 0);
+    const k0 = key(s.px, s.py, s.wet.h, s.wet.f);
+    const prev = new Map([[k0, null]]);
+    const q = [[s.px, s.py, s.wet.h, s.wet.f]];
+    const visited = new Set();
+    for (let i = 0; i < q.length; i++) {
+      const [x, y, wh, wf] = q[i], kk = key(x, y, wh, wf);
+      if (!wh && !wf) visited.add(y * s.w + x);
+      for (let d = 0; d < 4; d++) {
+        const r = sim(x, y, wh, wf, DIRS[d][0], DIRS[d][1], allow);
+        if (!r) continue;
+        if (r.ev === 3) {
+          const at = r.y * s.w + r.x;
+          if (reach1 && reach1.has(at)) continue;                 // pointless dip
+          if (mode === 2 && everSeen.has(at)) continue;           // save crossings for new ground first
+        }
+        if (r.ev) {
+          const path = [d]; let c = kk;
+          while (prev.get(c)) { path.push(prev.get(c)[1]); c = prev.get(c)[0]; }
+          return { path: path.reverse() };
+        }
+        const nk = key(r.x, r.y, r.wh, r.wf);
+        if (prev.has(nk)) continue;
+        prev.set(nk, [kk, d]); q.push([r.x, r.y, !!r.wh, !!r.wf]);
+      }
+    }
+    return { path: null, visited };
+  }
+  let steps = 0;
+  for (let it = 0; it < 4000; it++) {
+    if (s.won) return steps;
+    const a = search(false, null, 1);
+    for (const v of a.visited || []) everSeen.add(v);
+    const path = a.path || search(true, a.visited, 2).path || search(true, a.visited, 3).path;
+    if (!path) return -1;
+    for (const d of path) {
+      if (!tryMove(s, DIRS[d][0], DIRS[d][1])) return -1;
+      steps++;
+      if (!s.wet.h && !s.wet.f) everSeen.add(s.py * s.w + s.px);
+      let g = 0; while (s.sliding && !s.dead && !s.won && g++ < 300) { slideStep(s); steps += 0.5; }
+      if (s.dead || (s.sliding && !s.won)) return -1;
+      if (s.won) return steps;
+    }
+  }
+  return -1;
+}
+
+if (typeof module !== "undefined") module.exports = { generateLevel, verifyLevel, genParams };
+
+const GEN_LEVELS = [[4,90],[3,125],[1,105],[1,85],[6,110],[2,110],[6,100],[1,160],[4,175],[1,155],[6,110],[6,140],[2,120],[5,170],[4,120],[3,145],[1,180],[5,130],[1,140],[2,160],[1,140],[2,185],[1,235],[1,170],[1,225],[2,270],[7,200],[7,235],[7,200],[7,160],[2,195],[5,180],[4,195],[2,210],[9,260],[5,320],[9,230],[5,185],[2,215],[9,245],[1,230],[8,325],[8,285],[7,215],[2,220],[3,340],[7,320],[2,245],[3,365],[10,240],[3,325],[2,240],[2,270],[4,245],[16,335],[10,225],[2,260],[2,435],[1,400],[6,365],[5,300],[20,375],[9,325],[11,300],[13,350],[4,320],[5,290],[2,220],[13,245],[5,305],[10,365],[21,325],[12,410],[19,400],[2,360],[21,350],[34,415],[1,335],[16,345],[17,390],[18,330],[20,355],[26,325],[11,310],[7,310],[2,330],[22,345],[9,320],[30,385],[23,375],[25,260],[9,285],[17,340],[7,340],[11,330],[25,325],[12,295],[34,355],[19,320],[10,395],[27,340],[15,280],[15,380],[6,350],[22,265],[13,365],[13,340],[22,340],[35,435],[10,350],[23,390],[12,270],[38,320],[28,305],[25,320],[16,380],[24,360],[36,380],[12,340],[12,410],[37,290],[61,330],[27,395],[28,420],[7,320],[30,455],[27,325],[20,395],[29,335],[23,340],[2,355],[35,390],[23,320],[19,340],[55,325],[11,290],[36,380],[21,465],[4,365],[40,350],[42,510],[19,450],[10,340],[21,410],[8,420],[39,445],[43,400],[50,400],[31,330],[23,475],[3,430],[74,410],[56,330],[61,460],[24,360],[6,445],[32,385],[1,355],[107,330],[56,325],[105,355],[54,460],[30,425],[74,290],[28,540],[14,355],[44,425],[30,425],[6,360],[100,385],[2,400],[56,330],[75,385],[44,370],[57,410],[29,385],[16,395],[11,500],[194,345],[5,390],[30,380],[12,360],[124,305],[6,380],[62,375],[72,480],[75,335],[80,335],[34,410],[20,325],[30,315]];
+
+for (let k = 0; k < GEN_LEVELS.length; k++) {
+  const [seed, time] = GEN_LEVELS[k], L = k + 10;
+  const lv = generateLevel(L, seed);
+  LEVELS.push({ name: lv.name, hint: lv.hint, time, map: lv.map });
+}
+</script>
+<script>
+(() => {
+  const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  const stage = document.getElementById("stage");
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let S = null, levelIdx = 0, timeLeft = 0, playing = false, ts = 32, camX = 0, camY = 0, viewW = 11, viewH = 11;
+  let heldDir = null, lastMove = 0, lastSlide = 0, lastEnemy = 0, startT = 0, mapOpen = false, deathFx = 0;
+  const MOVE_MS = 150, SLIDE_MS = 70, ENEMY_MS = 380;
+  const fmt = s => s.toFixed(1) + "s";
+  let boardView = null;
+
+  // ---------- local progress ----------
+  let progress = { unlocked: 1, best: {} };
+  try {
+    const p = JSON.parse(localStorage.getItem("voltRunner2") || "null");
+    if (p) progress = p;
+    else { // levels 10+ were rebuilt for the new power-up rules: keep unlocks, drop old times
+      const o = JSON.parse(localStorage.getItem("voltRunner") || "null");
+      if (o) { progress.unlocked = o.unlocked || 1; for (const k in o.best || {}) if (+k < 9) progress.best[k] = o.best[k]; }
+    }
+  } catch (e) {}
+  const save = () => { try { localStorage.setItem("voltRunner2", JSON.stringify(progress)); } catch (e) {} };
+
+  // ---------- leaderboard (Google Play Games, Android app) ----------
+  const LB = { db: null };
+  const CAP = window.Capacitor;
+  const isNative = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform());
+  const plug = name => (isNative && CAP.Plugins && CAP.Plugins[name]) || null;
+  const PG = plug("PlayGames");
+  const LBIDS = window.LEADERBOARD_IDS || { sectors: [] };
+  const lbConfigured = () => !!(LBIDS.levelsCleared || (LBIDS.sectors || []).some(Boolean));
+  let pgSigned = false;
+  const SECTORS = Math.ceil(LEVELS.length / 10);
+  function sectorTotal(s) {
+    let t = 0;
+    for (let i = s * 10; i < s * 10 + 10; i++) { const b = progress.best[i]; if (b === undefined) return null; t += b; }
+    return Math.round(t * 10) / 10;
+  }
+  async function submitAll(onlySector) {
+    if (!PG || !pgSigned || !lbConfigured()) return;
+    const cleared = Object.keys(progress.best).length;
+    try { if (LBIDS.levelsCleared && cleared) await PG.submitScore({ leaderboardId: LBIDS.levelsCleared, score: cleared }); } catch (e) {}
+    for (let s = 0; s < SECTORS; s++) {
+      if (onlySector !== undefined && s !== onlySector) continue;
+      const id = (LBIDS.sectors || [])[s], tot = sectorTotal(s);
+      if (id && tot !== null) { try { await PG.submitScore({ leaderboardId: id, score: Math.round(tot * 1000) }); } catch (e) {} }
+    }
+  }
+  async function pgSignIn(interactive) {
+    if (!PG) return false;
+    try { const r = await PG.signIn({ interactive }); pgSigned = !!(r && r.signedIn); } catch (e) { pgSigned = false; }
+    if (pgSigned) submitAll();
+    return pgSigned;
+  }
+  pgSignIn(false);
+  window.__appSubmit = i => submitAll(Math.floor(i / 10));
+
+  function refreshBoard() {}
+  function showBoard() {
+    playing = false; boardView = { mode: "sectors" };
+    renderBoard();
+  }
+  function renderBoard() {
+    let rows = "";
+    for (let s = 0; s < SECTORS; s++) {
+      let n = 0; for (let i = s * 10; i < s * 10 + 10; i++) if (progress.best[i] !== undefined) n++;
+      const tot = sectorTotal(s), id = (LBIDS.sectors || [])[s];
+      rows += `<tr><td>${s + 1}</td><td>Levels ${s * 10 + 1}–${s * 10 + 10}<br><small style="color:var(--dim)">${tot !== null ? "total " + fmt(tot) : n + "/10 cleared"}</small></td><td>${PG && id ? `<button class="btn" data-lb="${s}">View</button>` : ""}</td></tr>`;
+    }
+    let note;
+    if (!isNative) note = "Online leaderboards work in the Android app.";
+    else if (!lbConfigured()) note = "Online leaderboards aren't set up yet.";
+    else if (!pgSigned) note = "Sign in to Google Play Games to post your times.";
+    else note = "Clear all 10 levels in a sector to post your total time.";
+    overlay(`<h2>🏆 Fastest times</h2><p style="font-size:13px">${note}</p>
+      <table class="board">${rows}</table>
+      <div class="row">${PG && lbConfigured() ? (pgSigned ? `<button class="go" id="allLb">All leaderboards</button>` : `<button class="go" id="pgIn">Sign in to Play Games</button>`) : ""}<button class="btn" id="bMenu">All levels</button></div>`, () => {
+      $("ovCard").querySelectorAll("[data-lb]").forEach(b => b.onclick = async () => {
+        if (!pgSigned && !(await pgSignIn(true))) { toast("Sign-in needed"); return; }
+        PG.showLeaderboard({ leaderboardId: LBIDS.sectors[+b.dataset.lb] }).catch(() => toast("Couldn't open the leaderboard"));
+      });
+      if ($("allLb")) $("allLb").onclick = () => PG.showLeaderboard({}).catch(() => toast("Couldn't open leaderboards"));
+      if ($("pgIn")) $("pgIn").onclick = async () => { await pgSignIn(true); renderBoard(); };
+      $("bMenu").onclick = showMenu;
+    });
+  }
+  $("lbBtn").onclick = () => showBoard();
+
+  // Android back button: game -> menu -> exit
+  const APP = plug("App");
+  if (APP) APP.addListener("backButton", () => {
+    if (mapOpen) { closeMap(); return; }
+    if ($("ov").classList.contains("show") && $("contBtn")) { APP.exitApp(); return; }
+    showMenu();
+  });
+  const SB = plug("StatusBar");
+  if (SB) { try { SB.setStyle({ style: "DARK" }); SB.setBackgroundColor && SB.setBackgroundColor({ color: "#0d1220" }); } catch (e) {} }
+
+  // ---------- sound ----------
+  let ac = null, soundOn = true;
+  function beep(freq, dur = .08, type = "square", vol = .05, slide = 0) {
+    if (!soundOn) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.value = freq;
+      if (slide) o.frequency.exponentialRampToValueAtTime(slide, ac.currentTime + dur);
+      g.gain.setValueAtTime(vol, ac.currentTime); g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + dur);
+      o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + dur);
+    } catch (e) {}
+  }
+  $("soundBtn").onclick = () => { soundOn = !soundOn; $("soundBtn").textContent = soundOn ? "🔊" : "🔇"; };
+
+  // ---------- layout ----------
+  function resize() {
+    if (!S) return;
+    const r = stage.getBoundingClientRect();
+    const maxCols = Math.min(S.w, 11);
+    ts = Math.max(24, Math.min(56, Math.floor(r.width / maxCols)));
+    viewW = Math.min(S.w, Math.floor(r.width / ts));
+    viewH = Math.min(S.h, Math.floor(r.height / ts));
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = viewW * ts * dpr; cv.height = viewH * ts * dpr;
+    cv.style.width = viewW * ts + "px"; cv.style.height = viewH * ts + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    camX = Math.max(0, Math.min(S.w - viewW, S.px - Math.floor(viewW / 2)));
+    camY = Math.max(0, Math.min(S.h - viewH, S.py - Math.floor(viewH / 2)));
+  }
+  addEventListener("resize", resize);
+
+  // ---------- flow ----------
+  const tierOf = i => i < 9 ? "Training" : i < 30 ? "Circuit I" : i < 55 ? "Circuit II" : i < 80 ? "Circuit III" : i < 100 ? "Overload" : i < 150 ? "Deep Grid" : "Portal Zone";
+  function startLevel(i, showIntro = true) {
+    boardView = null; mapOpen = false;
+    levelIdx = i; S = loadLevel(i); timeLeft = LEVELS[i].time; playing = false; deathFx = 0;
+    $("lvlName").textContent = (i + 1) + ". " + LEVELS[i].name.toUpperCase();
+    resize(); hud();
+    const big = S.w > viewW || S.h > viewH;
+    const best = progress.best[i];
+    if (showIntro) overlay(`<p style="font-size:11px;letter-spacing:.1em;text-transform:uppercase">${tierOf(i)}</p><h2>Level ${i + 1}<br>${esc(LEVELS[i].name)}</h2><p>${esc(LEVELS[i].hint)}</p>
+      <p style="font-size:12px">${S.cells} cells · ${LEVELS[i].time}s on the clock${big ? ` · ${S.w}×${S.h} map` : ""}${best !== undefined ? ` · your best ${fmt(best)}` : ""}</p>
+      <div class="row"><button class="go" id="goBtn">Start</button>${big ? `<button class="btn" id="peekBtn">Peek map</button>` : ""}</div>`,
+      () => { $("goBtn").onclick = begin; if ($("peekBtn")) $("peekBtn").onclick = () => showMap(true); });
+    else begin();
+  }
+  function begin() { hideOverlay(); mapOpen = false; playing = true; startT = performance.now(); lastEnemy = startT; beep(660, .1, "triangle"); }
+  function die(msg) {
+    playing = false; deathFx = performance.now(); beep(220, .4, "sawtooth", .06, 55);
+    setTimeout(() => overlay(`<h2>Shorted out!</h2><p>${esc(msg)}</p><div class="row"><button class="go" id="goBtn">Try again</button><button class="btn" id="mBtn">Levels</button></div>`, () => { $("goBtn").onclick = () => startLevel(levelIdx, false); $("mBtn").onclick = showMenu; }), 450);
+  }
+  async function win() {
+    playing = false; beep(523, .1, "triangle"); setTimeout(() => beep(784, .18, "triangle"), 100);
+    const used = Math.round((performance.now() - startT) / 100) / 10;
+    const prev = progress.best[levelIdx];
+    const pb = prev === undefined || used < prev;
+    if (pb) progress.best[levelIdx] = used;
+    progress.unlocked = Math.max(progress.unlocked, levelIdx + 2); save();
+    if (window.__appSubmit) window.__appSubmit(levelIdx);
+    const last = levelIdx === LEVELS.length - 1, i = levelIdx;
+    const render = (note) => overlay(last
+      ? `<h1>ALL CLEAR!</h1><p>You beat all ${LEVELS.length} levels. Fully charged!</p><p>Time: ${fmt(used)}</p>${note}<div class="row"><button class="go" id="goBtn">Leaderboard</button></div>`
+      : `<h2>Level ${i + 1} complete!</h2><p style="font-size:16px;color:var(--ink)">${fmt(used)}${pb && prev !== undefined ? " · new personal best!" : prev !== undefined ? ` · best ${fmt(prev)}` : ""}</p>${note}
+         <div class="row"><button class="go" id="goBtn">Next level ▶</button><button class="btn" id="bBtn">🏆 Board</button><button class="btn" id="rBtn">↻ Retry</button></div>`,
+      () => { $("goBtn").onclick = () => last ? showBoard(i) : startLevel(i + 1); if ($("bBtn")) { $("bBtn").onclick = () => showBoard(i); $("rBtn").onclick = () => startLevel(i, false); } });
+    const rankNote = () => {
+      if (!LB.db) return "";
+      if (!LB.uid || !LB.canWrite) return `<p style="font-size:12px">Times can't be posted from this view.</p>`;
+      const b = levelBoard(i), k = b.findIndex(r => r.d.id === LB.uid);
+      return k >= 0 ? `<p>🏆 Leaderboard rank <b style="color:var(--volt)">#${k + 1}</b> of ${b.length}</p>` : "";
+    };
+    render(rankNote());
+    if (LB.db && LB.uid && LB.canWrite) { await submitTime(i, used); if (!playing && !boardView && $("ov").classList.contains("show") && $("goBtn")) render(rankNote()); }
+  }
+  function overlay(html, after) { $("ovCard").innerHTML = html; $("ov").classList.add("show"); $("ovCard").scrollTop = 0; after && after(); }
+  function hideOverlay() { $("ov").classList.remove("show"); }
+  function showMenu() {
+    playing = false; boardView = null;
+    let html = "", tier = "";
+    LEVELS.forEach((L, i) => {
+      const t = tierOf(i);
+      if (t !== tier) { if (tier) html += "</div>"; html += `<div class="tier">${t}</div><div class="levels">`; tier = t; }
+      const done = progress.best[i] !== undefined;
+      html += `<button data-i="${i}" class="${done ? "done" : ""}" ${i + 1 > progress.unlocked ? "disabled" : ""}>${i + 1}${done ? `<small>${fmt(progress.best[i])}</small>` : ""}</button>`;
+    });
+    html += "</div>";
+    overlay(`<h1>VOLT<br>RUNNER</h1><p>Collect every power cell, unlock the socket, reach the portal. ${LEVELS.length} levels.</p>
+      <div class="row"><button class="go" id="contBtn">${progress.unlocked > 1 ? "Continue: level " + Math.min(progress.unlocked, LEVELS.length) : "Play"}</button><button class="btn" id="mLb">🏆 Leaderboard</button></div>
+      ${html}<p style="font-size:12px">Swipe or use the pad · Arrow keys / WASD · R retry · M map</p>`,
+      () => {
+        $("ovCard").querySelectorAll("[data-i]").forEach(b => b.onclick = () => startLevel(+b.dataset.i));
+        $("contBtn").onclick = () => startLevel(Math.min(progress.unlocked, LEVELS.length) - 1);
+        $("mLb").onclick = () => showBoard(Math.min(progress.unlocked, LEVELS.length) - 1);
+      });
+  }
+  $("menuBtn").onclick = showMenu;
+  $("restartBtn").onclick = () => startLevel(levelIdx, false);
+
+  // ---------- full map peek ----------
+  const MAPC = { "#": "#3a4670", ".": "#1d263f", ",": "#5b4330", "w": "#1462b8", "l": "#e0451f", "i": "#a9e4f5", "c": "#ffd43b", "E": "#b388ff", "S": "#3ddc84", "R": "#ff5a5f", "B": "#4d8dff", "Y": "#ffd43b", "r": "#ff5a5f", "b": "#4d8dff", "y": "#ffd43b", "x": "#a8743f", "h": "#4dd4ff", "f": "#ff8a3d", " ": "#080b14", "C": "#ffd43b", "/": "#ff6bd6", "\\": "#ff6bd6", "1": "#3ddc84", "2": "#ff8a3d", "3": "#ff6bd6", "4": "#ffffff" };
+  function showMap(fromIntro) {
+    if (!S) return;
+    if (mapOpen) { closeMap(); return; }
+    mapOpen = true; heldDir = null;
+    const r = stage.getBoundingClientRect();
+    const px = Math.max(3, Math.floor(Math.min((r.width - 40) / S.w, (r.height - 120) / S.h)));
+    overlay(`<h2>Map</h2><canvas id="mapCv" width="${S.w * px}" height="${S.h * px}"></canvas>
+      <p style="font-size:12px">⚪ you · <span style="color:#ffd43b">■</span> cells/yellow · <span style="color:#3ddc84">■</span> socket · <span style="color:#b388ff">■</span> exit · <span style="color:#ff6bd6">■</span> bumper${playing ? " · the clock is still running!" : ""}</p>
+      <button class="go" id="mapClose">${fromIntro ? "Start" : "Back to game"}</button>`, () => {
+      const m = $("mapCv").getContext("2d");
+      for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) {
+        const t = tileAt(S, x, y); m.fillStyle = MAPC[t] || "#1d263f";
+        if ("crbyhfC1234".includes(t)) { m.fillStyle = "#1d263f"; m.fillRect(x * px, y * px, px, px); m.fillStyle = MAPC[t]; m.fillRect(x * px + px * .2, y * px + px * .2, px * .6, px * .6); }
+        else m.fillRect(x * px, y * px, px, px);
+      }
+      for (const e of S.enemies) { m.fillStyle = "#ff3d5a"; m.fillRect(e.x * px + px * .15, e.y * px + px * .15, px * .7, px * .7); }
+      m.fillStyle = "#fff"; m.beginPath(); m.arc(S.px * px + px / 2, S.py * px + px / 2, Math.max(2, px * .6), 0, 7); m.fill();
+      $("mapClose").onclick = () => { if (fromIntro) begin(); else closeMap(); };
+    });
+  }
+  function closeMap() { mapOpen = false; if (playing) hideOverlay(); }
+  $("mapBtn").onclick = () => { if (playing || mapOpen) showMap(false); };
+
+  let toastT = 0;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1600); }
+
+  function hud() {
+    $("cellsOut").textContent = S.cells;
+    const t = $("timeOut"); t.textContent = timeLeft; t.classList.toggle("low", timeLeft <= 15);
+    const inv = [];
+    for (const [k, c] of [["r", "#ff5a5f"], ["b", "#4d8dff"], ["y", "#ffd43b"]]) if (S.keys[k]) inv.push(`<span style="background:${c};width:auto;padding:0 3px">⚷${S.keys[k] > 1 ? S.keys[k] : ""}</span>`);
+    if (S.boots.h) inv.push(`<span style="background:#4dd4ff">≈</span>`);
+    if (S.boots.f) inv.push(`<span style="background:#ff8a3d">▲</span>`);
+    $("inv").innerHTML = inv.join("") || `<small style="color:var(--dim)">—</small>`;
+  }
+
+  // ---------- moves ----------
+  const gateCount = () => { let n = 0; for (const c of S.grid) if (c === "R" || c === "B" || c === "Y" || c === "S") n++; return n; };
+  function doMove(dx, dy) {
+    if (!playing || mapOpen || S.sliding) return;
+    const before = { cells: S.cells, keys: { ...S.keys }, boots: { ...S.boots } };
+    const doorBefore = gateCount();
+    const moved = tryMove(S, dx, dy);
+    lastMove = performance.now();
+    if (!moved) { const t = tileAt(S, S.px + dx, S.py + dy); if (t === "S") toast(`Socket needs ${S.cells} more cell${S.cells > 1 ? "s" : ""}`); else if ("RBY".includes(t)) toast("You need a matching key"); return; }
+    afterStep(before, doorBefore);
+  }
+  function afterStep(before, doorBefore) {
+    if (S.cells < before.cells) beep(990, .07, "square", .04, 1400);
+    else if (S.keys.r + S.keys.b + S.keys.y > before.keys.r + before.keys.b + before.keys.y) { beep(700, .12, "triangle"); toast("Got a key!"); }
+    else if (S.boots.h !== before.boots.h) { beep(500, .2, "triangle"); toast("Swim fins! Good for one crossing."); }
+    else if (S.boots.f !== before.boots.f) { beep(500, .2, "triangle"); toast("Fire boots! Good for one crossing."); }
+    else beep(140, .03, "square", .02);
+    if (gateCount() < doorBefore) beep(330, .15, "triangle");
+    if (S.used) { toast(S.used === "h" ? "Fins used up" : S.used === "f" ? "Fire boots used up" : "Fins and boots used up"); beep(260, .12, "triangle", .04, 180); S.used = null; }
+    if (S.teleported) { beep(400, .18, "sine", .06, 1200); S.teleported = false; }
+    if (before.cells > 0 && S.cells === 0) toast("All cells! Socket unlocked ⚡");
+    hud();
+    if (S.dead) die(S.dead); else if (S.won) win();
+  }
+
+  // keyboard
+  const keyMap = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0], w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0], W: [0, -1], S: [0, 1], A: [-1, 0], D: [1, 0] };
+  addEventListener("keydown", e => {
+    if (e.target && e.target.tagName === "INPUT") return;
+    if (keyMap[e.key]) { e.preventDefault(); if (!heldDir || heldDir + "" !== keyMap[e.key] + "") { heldDir = keyMap[e.key]; doMove(...heldDir); } }
+    else if (e.key === "r" || e.key === "R") startLevel(levelIdx, false);
+    else if (e.key === "m" || e.key === "M") { if (playing || mapOpen) showMap(false); }
+    else if (e.key === "Enter" || e.key === " ") { const g = $("goBtn") || $("mapClose"); if (g && $("ov").classList.contains("show")) { e.preventDefault(); g.click(); } }
+  });
+  addEventListener("keyup", e => { if (keyMap[e.key] && heldDir + "" === keyMap[e.key] + "") heldDir = null; });
+
+  // d-pad with hold-to-repeat
+  document.querySelectorAll("#pad button[data-d]").forEach(b => {
+    const d = b.dataset.d.split(",").map(Number);
+    b.addEventListener("pointerdown", e => { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add("on"); heldDir = d; doMove(...d); });
+    const up = () => { b.classList.remove("on"); if (heldDir === d) heldDir = null; };
+    b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("lostpointercapture", up);
+  });
+
+  // swipe on the board: swipe = 1 step; swipe and hold = keep walking
+  let sw = null;
+  stage.addEventListener("pointerdown", e => { if (e.target !== cv) return; sw = { x: e.clientX, y: e.clientY, id: e.pointerId, dir: null }; cv.setPointerCapture(e.pointerId); });
+  stage.addEventListener("pointermove", e => {
+    if (!sw || e.pointerId !== sw.id) return;
+    const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+    if (Math.hypot(dx, dy) < 22) return;
+    const d = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)];
+    if (!sw.dir || sw.dir + "" !== d + "") { sw.dir = d; heldDir = d; doMove(...d); }
+    sw.x = e.clientX; sw.y = e.clientY;
+  });
+  const endSwipe = e => { if (sw && e.pointerId === sw.id) { if (sw.dir && heldDir === sw.dir) heldDir = null; sw = null; } };
+  stage.addEventListener("pointerup", endSwipe); stage.addEventListener("pointercancel", endSwipe);
+
+  // ---------- loop ----------
+  function loop(now) {
+    if (playing) {
+      if (S.sliding && now - lastSlide > SLIDE_MS) {
+        lastSlide = now;
+        const before = { cells: S.cells, keys: { ...S.keys }, boots: { ...S.boots } };
+        const doors = gateCount();
+        slideStep(S); afterStep(before, doors);
+      } else if (!S.sliding && heldDir && !mapOpen && now - lastMove > MOVE_MS) doMove(...heldDir);
+      if (playing && S.enemies.length && now - lastEnemy > ENEMY_MS) { lastEnemy = now; moveEnemies(S); if (S.dead) die(S.dead); }
+      if (playing) {
+        const left = LEVELS[levelIdx].time - Math.floor((now - startT) / 1000);
+        if (left !== timeLeft) { timeLeft = left; hud(); if (timeLeft <= 0) { S.dead = "Out of time! Move faster."; die(S.dead); } else if (timeLeft <= 10) beep(880, .04, "square", .02); }
+      }
+    }
+    if (S) draw(now);
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- drawing ----------
+  const KC = { r: "#ff5a5f", b: "#4d8dff", y: "#ffd43b" };
+  function rr(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+  function draw(now) {
+    const tx = S.px - Math.floor(viewW / 2), ty = S.py - Math.floor(viewH / 2);
+    const cx = Math.max(0, Math.min(S.w - viewW, tx)), cy = Math.max(0, Math.min(S.h - viewH, ty));
+    camX += (cx - camX) * .25; camY += (cy - camY) * .25;
+    if (Math.abs(cx - camX) < .01) camX = cx; if (Math.abs(cy - camY) < .01) camY = cy;
+    ctx.fillStyle = "#080b14"; ctx.fillRect(0, 0, viewW * ts, viewH * ts);
+    const x0 = Math.floor(camX), y0 = Math.floor(camY);
+    for (let y = y0; y <= y0 + viewH; y++) for (let x = x0; x <= x0 + viewW; x++) {
+      if (x >= S.w || y >= S.h) continue;
+      drawTile(tileAt(S, x, y), (x - camX) * ts, (y - camY) * ts, x, y, now);
+    }
+    for (const e of S.enemies) if (e.x >= x0 - 1 && e.x <= x0 + viewW + 1 && e.y >= y0 - 1 && e.y <= y0 + viewH + 1) drawEnemy((e.x - camX) * ts, (e.y - camY) * ts, now);
+    drawPlayer((S.px - camX) * ts, (S.py - camY) * ts, now);
+  }
+  function drawCell(px, py, x, y, now) {
+    const s = ts, m = s / 2, g = 1 + Math.sin(now / 250 + x + y) * .08;
+    ctx.save(); ctx.translate(px + m, py + m); ctx.scale(g, g);
+    ctx.shadowColor = "#ffd43b"; ctx.shadowBlur = s * .4;
+    ctx.fillStyle = "#ffd43b"; rr(-s * .17, -s * .26, s * .34, s * .5, s * .06); ctx.fill();
+    ctx.shadowBlur = 0; ctx.fillStyle = "#ffe98a"; ctx.fillRect(-s * .07, -s * .33, s * .14, s * .08);
+    ctx.fillStyle = "#6b4e00"; ctx.beginPath(); ctx.moveTo(s * .03, -s * .18); ctx.lineTo(-s * .08, s * .02); ctx.lineTo(0, s * .02); ctx.lineTo(-s * .03, s * .17); ctx.lineTo(s * .08, -s * .03); ctx.lineTo(0, -s * .03); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function floor(px, py, x, y) {
+    ctx.fillStyle = (x + y) % 2 ? "#1a2238" : "#1d263f"; ctx.fillRect(px, py, ts, ts);
+  }
+  function drawTile(t, px, py, x, y, now) {
+    const s = ts, m = s / 2;
+    if (t === " ") return;
+    if (t === "#") {
+      ctx.fillStyle = "#3a4670"; ctx.fillRect(px, py, s, s);
+      ctx.fillStyle = "#4b5a8c"; ctx.fillRect(px, py, s, s * .18);
+      ctx.fillStyle = "#2b3454"; ctx.fillRect(px, py + s * .82, s, s * .18);
+      ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(px + s * .48, py + s * .18, s * .04, s * .64);
+      return;
+    }
+    if (t === "w") {
+      ctx.fillStyle = "#1462b8"; ctx.fillRect(px, py, s, s);
+      ctx.strokeStyle = "rgba(160,220,255,.55)"; ctx.lineWidth = Math.max(1, s * .05);
+      for (let k = 0; k < 2; k++) { ctx.beginPath(); const yy = py + s * (.35 + k * .35);
+        for (let i = 0; i <= 8; i++) { const xx = px + s * i / 8; ctx.lineTo(xx, yy + Math.sin(now / 300 + i + x + k * 2) * s * .05); } ctx.stroke(); }
+      return;
+    }
+    if (t === "l") {
+      ctx.fillStyle = "#c2361b"; ctx.fillRect(px, py, s, s);
+      ctx.fillStyle = "#ff7a1a";
+      for (let k = 0; k < 3; k++) { const ph = (now / 900 + k * .33 + (x * 7 + y * 3) % 5 * .1) % 1;
+        ctx.globalAlpha = 1 - ph; ctx.beginPath(); ctx.arc(px + s * (.25 + k * .25), py + s * (.8 - ph * .6), s * (.06 + ph * .08), 0, 7); ctx.fill(); }
+      ctx.globalAlpha = 1; return;
+    }
+    if (t === "i") {
+      ctx.fillStyle = "#a9e4f5"; ctx.fillRect(px, py, s, s);
+      ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = Math.max(1, s * .05);
+      ctx.beginPath(); ctx.moveTo(px + s * .2, py + s * .45); ctx.lineTo(px + s * .45, py + s * .2); ctx.moveTo(px + s * .45, py + s * .8); ctx.lineTo(px + s * .8, py + s * .45); ctx.stroke();
+      return;
+    }
+    if (t === "C" || t === "/" || t === "\\") {
+      drawTile("i", px, py, x, y, now);
+      if (t === "C") { drawCell(px, py, x, y, now); return; }
+      ctx.save(); ctx.translate(px + m, py + m); if (t === "\\") ctx.scale(-1, 1);
+      ctx.strokeStyle = "#ff6bd6"; ctx.shadowColor = "#ff6bd6"; ctx.shadowBlur = s * .3; ctx.lineCap = "round";
+      ctx.lineWidth = s * .16; ctx.beginPath(); ctx.moveTo(-s * .34, s * .34); ctx.lineTo(s * .34, -s * .34); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.strokeStyle = "#ffd1f2"; ctx.lineWidth = s * .05; ctx.beginPath(); ctx.moveTo(-s * .28, s * .28); ctx.lineTo(s * .28, -s * .28); ctx.stroke();
+      ctx.restore(); return;
+    }
+    if (t === ",") { ctx.fillStyle = "#5b4330"; ctx.fillRect(px, py, s, s); ctx.fillStyle = "#6e523a"; for (let k = 0; k < 4; k++) ctx.fillRect(px + s * ((k * .37 + .1) % .8), py + s * ((k * .53 + .15) % .8), s * .1, s * .08); return; }
+    floor(px, py, x, y);
+    if (t === "c") { drawCell(px, py, x, y, now); return; }
+    if ("1234".includes(t)) {
+      const col = { 1: "#3ddc84", 2: "#ff8a3d", 3: "#ff6bd6", 4: "#ffffff" }[t];
+      ctx.save(); ctx.translate(px + m, py + m);
+      ctx.fillStyle = "#0b0f1d"; ctx.beginPath(); ctx.arc(0, 0, s * .38, 0, 7); ctx.fill();
+      ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = s * .35; ctx.lineWidth = s * .08;
+      ctx.beginPath(); ctx.arc(0, 0, s * .32, 0, 7); ctx.stroke(); ctx.shadowBlur = 0;
+      ctx.rotate(now / 250 * (t % 2 ? 1 : -1)); ctx.lineWidth = s * .05; ctx.setLineDash([s * .12, s * .1]);
+      ctx.beginPath(); ctx.arc(0, 0, s * .2, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore(); return;
+    }
+    if (t === "S") {
+      ctx.fillStyle = "#2a2f45"; rr(px + s * .06, py + s * .06, s * .88, s * .88, s * .12); ctx.fill();
+      ctx.strokeStyle = S.cells === 0 ? "#3ddc84" : "#ffd43b"; ctx.lineWidth = s * .06; ctx.stroke();
+      ctx.fillStyle = "#ffd43b"; ctx.font = `700 ${Math.floor(s * (S.cells > 9 ? .3 : .38))}px "Press Start 2P", monospace`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(S.cells, px + m, py + m + 1); return;
+    }
+    if (t === "E") {
+      for (let k = 3; k >= 1; k--) { ctx.fillStyle = ["", "#b388ff", "#7c4dff", "#3d1a99"][k]; ctx.beginPath(); ctx.arc(px + m, py + m, s * .13 * k * (1 + Math.sin(now / 200 + k) * .06), 0, 7); ctx.fill(); }
+      ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = s * .04; ctx.beginPath(); ctx.arc(px + m, py + m, s * .28, now / 200, now / 200 + 2); ctx.stroke(); return;
+    }
+    if (t in KC) {
+      ctx.save(); ctx.translate(px + m, py + m + Math.sin(now / 300 + x) * s * .03);
+      ctx.fillStyle = KC[t]; ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = s * .03;
+      ctx.beginPath(); ctx.arc(-s * .14, 0, s * .14, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillRect(-s * .02, -s * .045, s * .34, s * .09); ctx.fillRect(s * .18, 0, s * .06, s * .12); ctx.fillRect(s * .08, 0, s * .05, s * .09);
+      ctx.fillStyle = "#1d263f"; ctx.beginPath(); ctx.arc(-s * .14, 0, s * .05, 0, 7); ctx.fill();
+      ctx.restore(); return;
+    }
+    if (t === "R" || t === "B" || t === "Y") {
+      const c = KC[t.toLowerCase()];
+      ctx.fillStyle = c; ctx.fillRect(px + s * .04, py + s * .04, s * .92, s * .92);
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(px + s * .04, py + s * .48, s * .92, s * .04);
+      ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.beginPath(); ctx.arc(px + m, py + s * .4, s * .09, 0, 7); ctx.fill(); ctx.fillRect(px + m - s * .04, py + s * .4, s * .08, s * .2);
+      return;
+    }
+    if (t === "x") {
+      ctx.fillStyle = "#a8743f"; ctx.fillRect(px + s * .08, py + s * .08, s * .84, s * .84);
+      ctx.strokeStyle = "#6e4720"; ctx.lineWidth = s * .07; ctx.strokeRect(px + s * .12, py + s * .12, s * .76, s * .76);
+      ctx.beginPath(); ctx.moveTo(px + s * .15, py + s * .15); ctx.lineTo(px + s * .85, py + s * .85); ctx.stroke(); return;
+    }
+    if (t === "h" || t === "f") {
+      const c = t === "h" ? "#4dd4ff" : "#ff8a3d";
+      ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = s * .3;
+      ctx.beginPath(); ctx.arc(px + m, py + m, s * .28, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = "#0d1220";
+      if (t === "h") { ctx.beginPath(); ctx.ellipse(px + s * .4, py + m, s * .07, s * .15, -.3, 0, 7); ctx.ellipse(px + s * .6, py + m, s * .07, s * .15, .3, 0, 7); ctx.fill(); }
+      else { ctx.beginPath(); ctx.moveTo(px + m, py + s * .3); ctx.quadraticCurveTo(px + s * .7, py + s * .55, px + m, py + s * .7); ctx.quadraticCurveTo(px + s * .3, py + s * .55, px + m, py + s * .3); ctx.fill(); }
+    }
+  }
+  function drawPlayer(px, py, now) {
+    const s = ts, m = s / 2;
+    ctx.save(); ctx.translate(px + m, py + m);
+    if (deathFx) { const k = Math.min(1, (now - deathFx) / 400); ctx.globalAlpha = 1 - k * .7; ctx.rotate(k * 3); ctx.scale(1 - k * .5, 1 - k * .5); }
+    const bob = playing ? Math.sin(now / 160) * s * .02 : 0;
+    ctx.translate(0, bob);
+    if (S.boots.h || S.boots.f) { ctx.fillStyle = S.boots.f ? "#ff8a3d" : "#4dd4ff"; ctx.fillRect(-s * .22, s * .24, s * .16, s * .1); ctx.fillRect(s * .06, s * .24, s * .16, s * .1); }
+    ctx.strokeStyle = "#cfd8f0"; ctx.lineWidth = s * .04; ctx.beginPath(); ctx.moveTo(0, -s * .26); ctx.lineTo(0, -s * .38); ctx.stroke();
+    ctx.fillStyle = "#ffd43b"; ctx.shadowColor = "#ffd43b"; ctx.shadowBlur = s * .25; ctx.beginPath(); ctx.arc(0, -s * .4, s * .05, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = "#e8ecf7"; rr(-s * .28, -s * .27, s * .56, s * .52, s * .16); ctx.fill();
+    ctx.fillStyle = "#16213d"; rr(-s * .21, -s * .17, s * .42, s * .22, s * .08); ctx.fill();
+    const [fx, fy] = S.facing; ctx.fillStyle = "#4dd4ff"; ctx.shadowColor = "#4dd4ff"; ctx.shadowBlur = s * .15;
+    for (const ex of [-.09, .09]) { ctx.beginPath(); ctx.arc(s * (ex + fx * .05), s * (-.06 + fy * .03), s * .045, 0, 7); ctx.fill(); }
+    ctx.shadowBlur = 0; ctx.fillStyle = "#ffd43b"; ctx.fillRect(-s * .06, s * .1, s * .12, s * .06);
+    ctx.restore();
+  }
+  function drawEnemy(px, py, now) {
+    const s = ts, m = s / 2;
+    ctx.save(); ctx.translate(px + m, py + m); ctx.rotate(now / 300);
+    ctx.fillStyle = "#ff3d5a"; ctx.shadowColor = "#ff3d5a"; ctx.shadowBlur = s * .3;
+    ctx.beginPath(); for (let i = 0; i < 16; i++) { const r = i % 2 ? s * .2 : s * .36, a = i * Math.PI / 8; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0; ctx.fillStyle = "#2a0710"; ctx.beginPath(); ctx.arc(0, 0, s * .11, 0, 7); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, s * .045, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- boot ----------
+  S = loadLevel(0); timeLeft = LEVELS[0].time; resize(); hud();
+  showMenu();
+  requestAnimationFrame(loop);
+  if (document.fonts) document.fonts.ready.then(resize);
+})();
+</script>
+</body>
+</html>

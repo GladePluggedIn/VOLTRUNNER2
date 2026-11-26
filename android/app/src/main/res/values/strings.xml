@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Volt Runner</string>
+    <string name="title_activity_main">Volt Runner</string>
+    <string name="package_name">com.voltrunner.game</string>
+    <string name="custom_url_scheme">com.voltrunner.game</string>
+    <!-- STEP: replace 0000000000 with the Project ID from Play Console > Play Games Services > Configuration -->
+    <string translatable="false" name="game_services_project_id">0000000000</string>
+</resources>

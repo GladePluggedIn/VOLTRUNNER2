@@ -1,0 +1,6 @@
+{
+  "appId": "com.voltrunner.game",
+  "appName": "Volt Runner",
+  "webDir": "www",
+  "android": { "backgroundColor": "#0d1220" }
+}
